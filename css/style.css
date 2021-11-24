@@ -1,0 +1,281 @@
+/* rest css */
+img{border:none;}
+textarea,input,button{outline:none;}
+textarea:focus, input:focus, button:focus{outline:none; border:none;}
+textarea:active, input:active, button:active{outline:none;border:none;}
+a:hover {outline: none;}
+.btn.submit:focus {
+    outline-style: none;
+}
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section, main {
+    display: block;
+}
+label{margin:0;}
+ol, ul {
+    list-style: none;
+}
+blockquote, q {
+    quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+    content: '';
+    content: none;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+*{
+    box-sizing: border-box;
+    margin:0;
+    padding:0;
+}
+/* стили сайта начинаются от сюда */
+body {                      /* задаем цвет всей страници */
+    background-color: #F8F8FF;
+    font-family: 'Inter', sans-serif;   /* задаем шрифт всему сайту */
+
+}
+
+/* Задаем максимальную и минимальную ширину для сужение и растяжение. Сверху и снизу отступы 0, а по бакам автомат
+*/
+.wrap {
+    max-width: 1000px;        /* Не дает шире стать */
+    min-width: 320px;        /* Для ползунка прокрутки */
+    margin: 0 auto;          /* Центрирование */
+}
+
+.wrap .right-login {                  /* сверху логин */
+    display: flex;
+    justify-content: flex-end;         /* Направленость в конце */
+    margin-top: 10px;                   /* внешний отступ с верху */
+    margin-bottom: 40px;                /* внешний отступ с низу */
+}
+
+.wrap .right-login a {              /* кнопка логирование */
+    color: black;                   /* цвет кнопки чорный */
+    text-decoration: none;          /* форматируем текст */
+    margin: 5px;
+}
+
+.wrap .right-login a:hover {        /* При наведение курсора меняется цвет */
+    color: #808080;
+}
+
+.wrap h1 {                              /* название заголовок  */
+    display: block;                      /* делает блочным элемент */
+    font-size: 30px;                  /* размер текста  */
+    font-weight: 700;                 /* толшина текста, размер толшены зависит от типа шрифта подключоного гугла  */
+    text-align: center;               /* расположение шрифта относительно блока  */
+    margin-bottom: 50px;              /* Нижний отступ для другого блока */
+}
+
+.header {                            /* полоска сверху (навигация) */
+    margin-bottom: 45px;             /* ставим отступ для дальнейшего. Отступают сверху в низ */
+    background-color: #141310;    /* Задает Черновато-зеленый цвет в навигации */
+    border-radius: 50px;            /* округление углов в полоске */
+}
+
+.header .nav {                   /* что бы 2 блока распределились по навигации в заданых пропорция */
+    display: flex;
+    align-items: center;       /* центрирование относительно лого влияет на высоту когда флекс в строчку, а если по вертикале то на оборот */
+
+}
+
+ .header .nav .logo {          /* блок с логотипом */
+    width: 40%;                  /* ширина блока */
+    padding-left: 10px;         /* внутрений отступ с лева */
+
+}
+
+ .header .nav .logo img {               /* картинка */
+    display: block;                    /* переводим его в блочный элемент */
+    width: 140px;                       /* ширина */
+    height: 100px;                         /* высота */
+    filter: invert(1);        /* фильтры см тут https://ru.w3docs.com/snippets/css/kak-izmenit-tsvet-png-izobrazheniia-s-pomoshchiu-css.html  */
+
+}
+
+.header .nav .menu {                     /* само меню */
+    width: 60%;                          /* ширина самого блока */
+    display: flex;
+    justify-content: space-between;         /* равномерные пробелы в этом блоке */
+    padding-right: 50px;                    /* что бы был внутрений отступ */
+}
+
+.header .nav .menu a {                      /* текст (сылки) самого меню */
+    text-decoration: none;                  /* убераем декорацию текста */
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    color: #D3D3D3;
+}
+
+.header .nav .menu a:hover {                /* принаведении мышки на сылку меняет цвет */
+    color: #FFF8DC;
+}
+/* тело */
+.list {                                      /* список */
+    display: flex;                         /* Как будут отображатся    */
+    flex-direction: column;                  /* по вертикале */
+    align-items: center;                     /* центр */
+    padding:  0 50px ;                         /* внутрений отступ по бокам */
+    margin-bottom: 50px;                     /* отступ для низа */
+}
+
+.list .item {                                 /* сам блок с постом */
+    margin-bottom: 36px;                     /* отступ вниз */
+    background: #ffffff;                     /* заливка самого блока */
+    width: 90%;                              /* что бы занимало 90% контенера */
+    border-radius: 50px;                     /* закругление */
+    position: relative;                      /* что бы в углу появилась цена надо поставить relative и уже в стиле где
+                                                цена мы пишем absolute;     http://htmlbook.ru/css/position   */
+}
+
+
+.list .item .index {                        /* блок с оглавлением */
+    padding: 0 30px;
+    padding-top: 30px;
+
+}
+
+.list .item .index h2 {                      /* само оглавление */
+    text-align: center;                       /* текст по центру */
+}
+
+.list .item .post {                           /* блок с постом */
+    padding: 30px;
+}
+
+.list .item .post span {                      /* текст */
+    white-space:pre-line;
+}
+
+.list .item .edit {               /* блок с редактированием  */
+    position: absolute;       /* тут прописываем absolute; подробности тут http://htmlbook.ru/css/position   */
+    bottom:  1px;                 /* Позиция считается от краев экрана (броузера) */
+    right: 30px;
+    padding: 5px 15px;          /* внутрение отступы */
+
+}
+
+.list .item .edit a {               /* сам текст  */
+    text-decoration: none;          /* убираем декорацию текста  */
+    font-size: 10px;                /* размер шрифта  */
+    color: #1E90FF ;                  /* цвет  */
+}
+
+
+    /* подвал  */
+
+.black {
+    background-color: #0A0A0F; /* Задает Черновато-синий отенок цвет в подвале */
+}
+
+
+.black .wrap .footer {                      /* подвал  */
+    display: flex;
+    align-items: center;                         /* по центру  */
+    justify-content: space-around;                 /* пробел между ними  */
+    padding: 50px;                              /*   внутрений отступ*/
+}
+
+.black .wrap .footer a {                           /* сами сылки  */
+    display: block;                                 /* перевод в блочный элемент */
+    opacity: 0.4;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: #ffffff;
+}
+
+/* вкладка добавить add  */
+
+#add .item form {                                /* блок там где формы для правельного отбражение  */
+    display: flex;
+    flex-direction: column;
+    padding: 50px;
+}
+
+#add .item form .type {                            /* выбра категорию  */
+    display: block;
+    width: 30%;
+    margin-bottom: 10px;
+}
+
+#add .item form .index {                            /* оглавление  */
+    display: block;
+    border: 1px solid black;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight:bold;
+    padding: 10px;
+}
+
+#add .item form .comment {                          /* сам коментарий  */
+    display: block;
+    height: 300px;
+    border: 1px solid black;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+#add .item form .button {                           /* кнопка  */
+    display: block;
+    width: 100px;
+
+}
+
+/* вкладка edit */
+
+#add .item form .button-block {                     /* чтобы пробел был между кнопками отправить и удалить  */
+    display: flex;
+    justify-content: space-between;
+}
+
+/* вкладка login */
+
+#login {                                            /* маленький костыль что бы правелно отображалась  */
+    display: flex;
+    margin-bottom: 20%;
+
+}
+
+#login .dog-nail {                                  /* блок с лева и справа  */
+    width: 20%;
+
+}
+#login .item {                                         /* центральный блок  */
+    flex-grow: 1;
+}
+
+#login .item form {                                 /* блок с формой  */
+    display: flex;
+    flex-direction: column;
+    padding: 50px;
+}
+
+#login .item form .email {                              /* поле для вода эмейла  */
+    display: block;
+    border: 1px solid black;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight:bold;
+    padding: 10px;
+}
+
+#login .item form .password {                           /* поле для вода пароля  */
+    display: block;
+    border: 1px solid black;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight:bold;
+    padding: 10px;
+}
+
+
+
+
+
