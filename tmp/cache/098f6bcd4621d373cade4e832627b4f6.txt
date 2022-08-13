@@ -1,0 +1,1 @@
+a:2:{s:4:"data";a:5:{s:11:"meta_author";s:35:"Karpunin Pavel amedomaro2@gmail.com";s:14:"meta_copyright";s:20:"amedomaro2@gmail.com";s:14:"meta_generator";s:8:"PhpStorm";s:11:"admin_email";s:15:"admin@gmail.com";s:9:"site_name";s:67:"Блог для подготовке php собеседований";}s:8:"end_time";i:1659885100;}

@@ -1,0 +1,154 @@
+/* rest css */
+img{border:none;}
+textarea,input,button{outline:none;}
+textarea:focus, input:focus, button:focus{outline:none; border:none;}
+textarea:active, input:active, button:active{outline:none;border:none;}
+a:hover {outline: none;}
+.btn.submit:focus {
+    outline-style: none;
+}
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section, main {
+    display: block;
+}
+label{margin:0;}
+ol, ul {
+    list-style: none;
+}
+blockquote, q {
+    quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+    content: '';
+    content: none;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+*{
+    box-sizing: border-box;
+    margin:0;
+    padding:0;
+}
+/* стили сайта начинаются от сюда */
+body {                      /* задаем цвет всей страници */
+    background-color: #F8F8FF;
+    font-family: 'Inter', sans-serif;   /* задаем шрифт всему сайту */
+
+}
+
+header .right-login {                  /* сверху логин */
+    display: flex;
+    justify-content: flex-end;         /* Направленость в конце */
+    margin-top: 10px;                   /* внешний отступ с верху */
+    margin-bottom: 40px;                /* внешний отступ с низу */
+}
+
+header .right-login a {              /* кнопка логирование */
+    color: black;                   /* цвет кнопки чорный */
+    text-decoration: none;          /* форматируем текст */
+    margin: 5px;
+}
+
+header .right-login a:hover {        /* При наведение курсора меняется цвет */
+    color: #808080;
+}
+
+header h1 {                              /* название заголовок  */
+    display: block;                      /* делает блочным элемент */
+    font-size: 30px;                  /* размер текста  */
+    font-weight: 700;                 /* толшина текста, размер толшены зависит от типа шрифта подключоного гугла  */
+    text-align: center;               /* расположение шрифта относительно блока  */
+    margin-bottom: 50px;              /* Нижний отступ для другого блока */
+}
+
+
+header .nav-user {                     /* полоска сверху (навигация) */
+    margin-bottom: 45px;             /* ставим отступ для дальнейшего. Отступают сверху в низ */
+    background-color: #141310;    /* Задает Черновато-зеленый цвет в навигации */
+    border-radius: 50px;            /* округление углов в полоске */
+}
+
+
+
+header .img-user {               /* картинка */
+    padding-left: 10px;
+    width: 140px;                       /* ширина */
+    height: 100px;                         /* высота */
+    filter: invert(1);        /* фильтры см тут https://ru.w3docs.com/snippets/css/kak-izmenit-tsvet-png-izobrazheniia-s-pomoshchiu-css.html  */
+
+}
+header .nav-link {                    /* переопредиляем цвет текста в меню */
+    color: #D3D3D3 !important;
+}
+
+header .nav-link:hover  {                /* принаведении мышки на сылку меняет цвет */
+    color: #FFF8DC;
+}
+
+header .nav-link:focus {                        /* принажатие мышки на сылку меняет цвет */
+    color: #F0FFF0;
+}
+
+header .navbar-toggler {                       /* в меню меняем цвет на белый, когда меньше экран */
+    filter: invert(1);
+}
+
+/* тело */
+
+main .py-5 {                                   /* переопредиляем (удоляем) падинг */
+    padding-top: 0 !important;
+}
+
+
+
+
+main .edit {
+    text-decoration: none;          /* убираем декорацию текста  */
+    font-size: 10px;                /* размер шрифта  */
+    color: #1E90FF ;                  /* цвет  */
+}
+
+main .text-user a {              /* кнопка на верх  */
+    text-decoration: none;
+    border: 3px solid #ffffff;           /* создаем рамка вокруг: толшина тип цвет  */
+    border-radius: 20px ;               /* закругление имеет 4 свойства  */
+    color: #fff;                        /* цвет текста  */
+    padding: 10px 20px;                 /* внутрение отступы от текста  */
+    transition: .3s;                   /*  время выполнение задачи, ноль можно не указывать (0,3)  */
+    background-color: #252525;
+
+}
+
+main .text-user a:hover {                /* эфекты при наведение на кнопка на верх  */
+    background: #E1E1E1;               /* В какой цвет должен изменятся при наведение  */
+    box-shadow: 0 0 6px 1px #cccc ;    /* смешение x, y , размытость ,рамка толшина ,цвет ( это тень) */
+    color: #2A2A2A;                    /* изменение цвета текста при наведении  */
+}
+
+/* подвал */
+
+footer .p {                               /* Падинг для всего подвала (чорная линия) */
+    padding: 50px;
+}
+
+footer .container-fluid a {           /* сылки */
+    opacity: 0.4;
+    font-size: 15px;
+    line-height: 16px;
+    font-weight: 400;
+    color: #ffffff;
+}
+
+footer .container-fluid a:hover {      /* интерактив сылок */
+    opacity: 0.7;
+}
+
+/* add */
+
+main form select, datalist {           /* обрашение к форме что бы они нетак были слитны */
+    margin-bottom: 10px;
+
+}

@@ -1,0 +1,24 @@
+{
+  "authors": [
+    {
+      "name": "Pasha Karpunin",
+      "email": "amedomaro2@gmail.com"
+    }
+  ],
+
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    },
+    "files": ["helpers.php", "config/init.php"]
+  },
+
+  "require": {
+    "gabordemooij/redbean": "dev-master"
+  }
+}
+
+
+
+
+
