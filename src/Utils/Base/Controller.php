@@ -15,6 +15,9 @@ abstract class Controller
     public $data = [];
     // Тут будут мета даный хранится тайтл, дескрипшон
     public $meta = ['title' => '', 'desc' => '', 'keywords' => ''];
+    // Объект модели (бд)
+    public $nameModal;
+
 
     public function __construct()
     {
@@ -53,5 +56,6 @@ abstract class Controller
         $this->data['siteData'] = $data;
     }
 
-
+    // этот метод нужен для кастыля что бы незабивать лог.... баг  который немогу понять почему он появляется
+    public function js (): void{ }
 }

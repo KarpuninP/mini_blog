@@ -3,47 +3,40 @@
 namespace App\Controller;
 
 
-use App\Model\Blog;
-use App\Utils\App;
-use App\Utils\Base\Controller;
-use App\Utils\Registry;
 
-class HomeController extends Controller
+class HomeController extends TypeController
 {
 
-    public function  __construct()
-    {
-        // если нужено в конструкторе что то добавить пишем это
-        parent::__construct();
-
-    }
-
-    // Главная страница
+    // Главная страница (тема)
     public function index()
     {
+        // Проверка гет параметра
+        $index = $this->getReqParam('theory');
+        // Проверяем то что получилось
+//       var_dump($index);
 
+        // Засовываем название вкладки и описание
+        $data = [
+            'namePage' => 'Теоретический раздел',
+            'descriptionPage' => 'Выводится теория, тех или иных технологий',
+        ];
 
+        // В массив $data мы добавляем в конец то что пришло от метода dbData
+        // В методе dbData приходит массив с данными для отображения на сайте и массив с нумерацией страниц
+        // Используем функция array_merge для слияния массива
+        $data = array_merge($data, $this->dbData('theory', $index));
 
+        // Проверяем все ли впоредке
+//        debug($data);
 
-
-      // обезаловка для возрата странице
+      // обязаловка для возврата странице
       // мета данные
       $this-> setMeta (
           'Главная страница',
           'тут содержится данные про сдачу собеседование',
           'Собеседование на php, ответы на собеседование'
       );
-      // возрашает к подключение шаюлон и передача данных
-      $this-> view('main.main');
+      // возвращает к подключению шаблон и передача данных
+      $this-> view('main.main', $data);
     }
-
-    public function p(): void
-    {
-        echo 'hi';
-
-    }
-
-    // этот метод нужен для кастыля что бы незабивать лог.... баг  который немогу понять почему он появляется
-    public function js (): void{ }
-
 }

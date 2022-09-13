@@ -25,7 +25,7 @@
             <div class="container">
                 <div class="right-login">
                     <!-- откроется модальное окно / использовать js -->
-                    <a href="#" class="login" >Sign in/up</a>
+                    <a href="#" class="login" data-bs-toggle="modal" data-bs-target="#staticBackdrop">Sign in/up</a>
                 </div>
 
                 <h1>Подготовка к собеседованию на PHP разработчика</h1>
@@ -44,13 +44,13 @@
                             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#">Теория</a>
+                                    <a class="nav-link" href="/">Теория</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#">Практика</a>
+                                    <a class="nav-link" href="practice">Практика</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#">Добавить</a>
+                                    <a class="nav-link" href="add">Добавить</a>
                                 </li>
                             </ul>
                         </div>
@@ -68,7 +68,7 @@
                 <div class="navbar-inner">
                     <div class="container-fluid ">
                         <div class="container d-flex justify-content-evenly" >
-                            <a href="#" >Об авторе</a>
+                            <a id="b" href="#" >Об авторе</a>
                             <a href="#" >Резюме</a>
                             <a href="#" >Git</a>
                             <a href="#" >Контакты</a>
@@ -77,8 +77,28 @@
                 </div>
             </div>
         </footer>
-
+        <!-- модальное окно старт-->
+        <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">Регистрация</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <a id="modal" href="modal" >Резюме</a>
+                        <?php var_dump($_GET);?>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary">Understood</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- модальное окно конец-->
         <script src="js/bootstrap.bundle.min.js"></script>
+        <script src="js/jquery-1.11.0.min.js"></script>
+        <script src="js/main.js"></script>
 
     </body>
 </html>

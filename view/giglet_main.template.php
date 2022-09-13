@@ -12,12 +12,14 @@
     </section>
 
     <?php
+   // Что бы небыло ошибки, если url равно /test/db значит мы отобразим консоль нашего бд
+    if ( $_SERVER['REQUEST_URI'] == '/test/db') {
     $logs = R::getDatabaseAdapter()
         ->getDatabase()
         ->getLogger();
 
     echo '<pre>' . print_r( $logs, true )  . '</pre>';
-    ?>
+   } ?>
 
 </main>
 

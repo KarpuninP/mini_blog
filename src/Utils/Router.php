@@ -22,8 +22,6 @@ class Router
 
             // запускаем базовый шаблон
             $object->getView();
-
-
     }
 
 
@@ -65,7 +63,6 @@ class Router
         if (!method_exists($controller, $method)) {
             throw new \Exception('Нет метода: "' . $method  . '" в классе: ' . '"' . $controller . '"', 404);
         }
-
 
         // Возрашаем полный путь контролера и название метода в массиве.
         return [$controller, $method];

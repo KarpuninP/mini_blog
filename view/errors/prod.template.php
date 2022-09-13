@@ -8,6 +8,7 @@
 
 <!-- На эту страницу будет перенаправлена если случится какаета ошибка, не 404 -->
 <h1>Произошла ошибка</h1>
+<p><a href="<?=PATH;?>">Go back to Home</a></p>
 
     <section class="py-5 text-center container">
         <div class="row py-lg-5">
