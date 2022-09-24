@@ -1,14 +1,13 @@
 <?php
-// Вывод ошибок, на продакшене его убираем
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// Error output
+//ini_set('display_errors', 1);
+//ini_set('display_startup_errors', 1);
+//error_reporting(E_ALL);
 
-session_start();  // запуск сесии
+// Start session
+session_start();
 
-
-
-// проверка сесии и что надо отображать
+// check session
 if (!isset($_SESSION['isLogin'])) {
     $login =  'Войти';
     $addUrl = '';
@@ -21,16 +20,17 @@ if (!isset($_SESSION['isLogin'])) {
     $edit = 'редактировать';
 }
 
-// Распаковка с БД для заполнения страница
+// Take data
 $dataPractice = file_get_contents('database/commentsPractice.json');
-// Преобразуем строку в массив php
+// Decoder
 $dataPractice = json_decode($dataPractice, 1);
 if ($dataPractice == null) {
     $dataPractice = [];
 }
 
+// Take data
 $dataTheory = file_get_contents('database/commentsTheory.json');
-// Преобразуем строку в массив php
+// Decoder
 $dataTheory = json_decode($dataTheory, 1);
 if ($dataTheory == null) {
     $dataTheory = [];
