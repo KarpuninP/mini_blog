@@ -5,12 +5,11 @@ namespace App\Utils;
 class App
 {
     // $app - временый контейнер (шаблом проэктирование риестор)
-    public static $app;
+    public static object $app;
 
     public function __construct()
     {
-
-        // Стартуем сесию
+        // Стартуем сессию
         session_start();
 
         // Создаем класс с нашими эксепшонами, что бы они подключились
@@ -18,7 +17,7 @@ class App
 
         // Подключаем наш реестр (в нем мы можем хранить все наши параметры)
         self::$app = Registry::instance();
-        // Вызываем getParams что бы заолнить контейнер Registry::instance данными
+        // Вызываем getParams что бы заполнить контейнер Registry::instance данными
         $this->getParams();
 
         // Подключаем наш роутер (маршрутизатор)
@@ -30,16 +29,14 @@ class App
     // Получение параметров из папки config.
     protected function getParams(): void
     {
-        // В переменную помешаем то что содержится params.php. Где обрашаемся константа CONF (путь к папке)
+        // В переменную помешаем то что содержится params.php. Где обращаемся константа CONF (путь к папке)
         $params = require_once CONF . '/params.php';
-        // Если этот масив не пуст, то пройдемся по нем и возмем отдельно ключ и занчение
+        // Если этот массив не пуст, то пройдемся по нем и возьмём отдельно ключ и значение
 
-        if(!empty($params))
-        {
-            foreach($params as $k => $v)
-            {
-                // Тут мы обрашаемся к класу Registry метод setProperty и влаживаем туда ключ и занчение
-                self::$app->setProperty($k,$v);
+        if (!empty($params)) {
+            foreach ($params as $k => $v) {
+                // Тут мы обращаемся к классу Registry метод setProperty и помешаем туда ключ и значение
+                self::$app->setProperty($k, $v);
             }
         }
     }

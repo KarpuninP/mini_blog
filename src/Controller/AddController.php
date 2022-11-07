@@ -4,6 +4,9 @@ namespace App\Controller;
 
 use App\Model\Blog;
 use App\Utils\Base\Controller;
+use Exception;
+use JetBrains\PhpStorm\ArrayShape;
+use RedBeanPHP\RedException\SQL;
 
 class AddController extends Controller
 {
@@ -15,10 +18,8 @@ class AddController extends Controller
         $this->nameModal = new Blog();
     }
 
-
-
     /**
-     * @throws \RedBeanPHP\RedException\SQL
+     * @throws SQL
      */
     // Главная страница
     public function index(): void
@@ -27,10 +28,13 @@ class AddController extends Controller
         //var_dump($_SERVER['REQUEST_METHOD']);
         $data = [];
         if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+            // обязательный часть
             $data = [
                 'namePage' => 'Добавить текст в блог',
-                'descriptionPage' => 'Тут можно добавить текст в блог. С заданной тематикой и разделом'
+                'descriptionPage' => 'Тут можно добавить текст в блог. С заданной тематикой и разделом',
+                'themesList' => $this->themesList()
             ];
+
         }else {
             // Запускаем метод start(), он возвращает id поста
             $idPost = $this->start();
@@ -55,9 +59,9 @@ class AddController extends Controller
                 error_log("[" . date('Y-m-d H:i:s') . "] Текст ошибки: По какой то причине, недобавлнена запись в бд | Файл: src/Controller/AddController.php, метод index  \n=================\n", 3, ROOT . '/tmp/errors.log');
             }
         }
-
+        $data['link'] = 'add';
         // смотрим что у нас в дате файле
-        var_dump($data);
+//      var_dump($data);
         // обязаловка для возврата странице
         // мета данные
         $this-> setMeta (
@@ -69,99 +73,95 @@ class AddController extends Controller
         $this-> view('add.add', $data);
     }
 
-
-
     /**
-     * @throws \RedBeanPHP\RedException\SQL
-     * @throws \Exception
+     * @throws SQL
+     * @throws Exception
      */
     // Начало, просмотреть по поводу переадресации на другой метод и вывод модального окна, что все загружено
     public function start(): int|string
     {
-
         //var_dump($_POST);
         if (isset($_POST['send'])) {
             // Задаем переменные и проверяем пришло ли если нет то задаем пустую строку (тернарные операторы)
-            $type = isset($_POST['type']) ? $_POST['type'] : '';
-            $themes = isset($_POST['themes']) ? $_POST['themes'] : '';
-            $postId = isset($_POST['postId']) ? $_POST['postId'] : '';
-            $index = isset($_POST['index']) ? $_POST['index'] : '';
-            $comment = isset($_POST['comment']) ? $_POST['comment'] : '';
+
 
             // Запускаем метод обновить или добавить
-           $data = $this->add($type, $themes, $postId, $index, $comment);
-
-        }elseif (isset($_POST['dell'])) {
-            // Задаем переменные и проверяем пришло ли если нет то задаем пустую строку (тернарные операторы)
-            $postId = isset($_POST['postId']) ? $_POST['postId'] : '';
-            $type = isset($_POST['type']) ? $_POST['type'] : '';
-
-            $this->dell($type, $postId);
-            $data = 0;
-        }else {
-           throw new \Exception("It came in other ways (hacking)", 500);
+            $data = $this->add($_POST);
+// Если нажата кнопка на редактирование
+        } elseif (isset($_POST['edit'])) {
+            // Проверяем что получили и отправляем на метод редактирование
+//            var_dump($_POST);
+            $data = $this->edit($_POST);
+//  Если нажата кнопка удалить
+        } elseif (isset($_POST['dell'])) {
+            // Проверяем что получили и отправляем на метод удаление
+//            var_dump($_POST);
+            $data = $this->dell($_POST);
+        } else {
+            throw new Exception("It came in other ways (hacking)", 500);
         }
         return $data ;
     }
 
     /**
-     * @throws \RedBeanPHP\RedException\SQL
-     * @throws \Exception
+     * @throws SQL
+     * @throws Exception
      */
     // Создает или обновляет таблицу
-    public function add(string $type, string $themes, int $postId, string $index, string $comment): int|string
+    public function add(array $post): int|string
     {
         // Проверяем что пришло
-        // var_dump($type, $themes, $postId, $index, $comment);
-       $data = $this->validation($type, $themes, $postId, $index, $comment);
-       //var_dump($data);
+        // var_dump($post);
+        $data = $this->validation($post);
+        //var_dump($data);
 
-        // Если в $postId что то есть значит запустим метод обновить, если нет то создать (дописать)
-
-      // Запускаем в модель Blog() метод create и передаем туда проваледированые данные
-      $tableId = $this->nameModal->create($data['type'], $data['themes'], $data['index'], $data['comment']);
-      //var_dump($tableId);
-      return $tableId;
+        // Запускаем в модель Blog() метод create и передаем туда проваледированые данные
+        return $this->nameModal->create($data['type'], $data['themes'], $data['index'], $data['comment']);
     }
 
-
-
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     // Валидация пришедших данных
-    public function validation(string $type, string $themes, int $postId, string $index, string $comment): array
+    #[ArrayShape(['type' => "mixed|string", 'themes' => "mixed", 'postId' => "int|null|string", 'index' => "mixed", 'comment' => "mixed"])]
+    public function validation(array $post): array
     {
+        // Если нет, то подставляем пустую строку
+        $type = $post['type'] ?? '';
+        $themes = $post['themes'] ?? '';
+        $postId = $post['postId'] ?? '';
+        $index = $post['index'] ?? 'index';
+        $comment = $post['comment'] ?? 'text';
 
         // Проверка переменой $type
-        if (!$type || $type != 'theory' &&  $type != 'practice') {
+        if ($type != 'theory' && $type != 'practice') {
             // Выкидываем ошибку
-            throw new \Exception("Ошибка, несоответствует $type заданным параметрам.", 500);
+            throw new Exception("Ошибка, несоответствует $type заданным параметрам.", 500);
         }
 
         // Проверка переменой $themes
         $lendThemes = strlen($themes);
-        if (!$lendThemes || $lendThemes < 0 || $lendThemes > 50) {
+        if (!$lendThemes || $lendThemes <= 0 || $lendThemes > 50) {
             // Выкидываем ошибку
-            throw new \Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
+            throw new Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
         }
 
         if (!is_numeric($postId) && $postId !== '') {
             // Выкидываем ошибку
-            throw new \Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
+            throw new Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
         }
 
         // Проверка переменой $index
         $lendIndex = strlen($index);
-        if (!$lendIndex || $lendIndex < 0 || $lendIndex > 250) {
+        if (!$lendIndex || $lendIndex <= 0 || $lendIndex > 250) {
             // Выкидываем ошибку
-            throw new \Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
+            throw new Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
         }
 
         // Проверка переменой $index
         $lendComment = strlen($comment);
         if (!$lendComment || $lendComment < 0 || $lendComment > 50000) {
-            throw new \Exception("Ошибка, несоответствует текст заданным параметрам.Файл add_backend.php", 500);
+            throw new Exception("Ошибка, несоответствует текст заданным параметрам.Файл add_backend.php", 500);
         }
 
         // Убираем возможность подставить вредоносный код (кодируем/экранируем спец. символы)
@@ -179,9 +179,34 @@ class AddController extends Controller
 
     }
 
-    public function dell(string $type, int $postId)
+//
+    public function themesList(): ?array
     {
-       echo 'удалино ' . $postId;
+        return $this->nameModal->taglist();
+    }
 
+    /**
+     * @throws Exception
+     */
+//    Редактировать пост
+    public function edit(array $post): int
+    {
+        // Валидация данных
+        $data = $this->validation($post);
+//        var_dump($data);
+        return $this->nameModal->edit($data['postId'], $data['type'], $data['index'], $data['comment']);
+    }
+
+    /**
+     * @throws Exception
+     */
+    // Удалить пост
+    public function dell(array $post): int
+    {
+//        var_dump($post);
+        // Валидация данных
+        $data = $this->validation($post);
+        // Запускаем удаление, получаем 1 удалино, 0 неудалино
+        return $this->nameModal->remove($data['postId'], $data['type'], $data['themes']);
     }
 }

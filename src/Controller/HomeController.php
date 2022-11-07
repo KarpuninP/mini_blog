@@ -7,9 +7,14 @@ namespace App\Controller;
 class HomeController extends TypeController
 {
 
+
+    /**
+     * @throws \Exception
+     */
     // Главная страница (тема)
     public function index()
     {
+//        var_dump(isset($_SESSION['isLogin']));
         // Проверка гет параметра
         $index = $this->getReqParam('theory');
         // Проверяем то что получилось

@@ -8,35 +8,46 @@ abstract class Controller
 {
 
     // название папки шаблон
-    public $template = '';
+    public string $template = '';
     // название самого шаблона
-    public $layout = '';
-    // Тут будет хранится данные
-    public $data = [];
-    // Тут будут мета даный хранится тайтл, дескрипшон
-    public $meta = ['title' => '', 'desc' => '', 'keywords' => ''];
+    public string $layout = '';
+    // Тут будет храниться данные
+    public array $data = [];
+    public array $onlyData = [];
+    // Тут будут мета данный хранится тайтл, дескрипшон
+    public array $meta = ['title' => '', 'desc' => '', 'keywords' => ''];
     // Объект модели (бд)
-    public $nameModal;
+    public object $nameModal;
 
 
     public function __construct()
     {
-        // добовляем в дату параметры, что бы можно их было получить
+        // добавляем в дату параметры, что бы можно их было получить
         $data['params']=App::$app->getProperties();
-        // засовывваем все в свойства
+        // засовываем все в свойства
         $this->data = $data;
 
-        // меняем тему сайта (типа темная и т.д.) потом что то доделать отдельный клас это в качестве примера
+        // меняем тему сайта (типа темная и т.д.) потом что-то доделать отдельный клас это в качестве примера
         //$this->layout = 'dark_blog';
     }
 
+    /**
+     * @throws \Exception
+     */
     // Для отрендование странички. Получаем параметры от базового контролера и перекидываем это class View
     public function getView(): void
     {
         //создаем обьект класса View и передаем туда параметры этого класса
         $viewObject = new View($this->layout, $this->template, $this->meta);
-        // Далее запускаем метод, для того что бы отрендовать страничку
-        $viewObject->show($this->data);
+        // Если будет отправка запроса через ajax сервер, то делаем это
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            // еше доработать
+            $viewObject->getJsAjax($this->onlyData);
+        } else {
+            // В противном случае просто запускаем это
+            // Далее запускаем метод, для того что бы отрендовать страничку
+            $viewObject->show($this->data);
+        }
     }
 
     // формировать мето данные
@@ -56,6 +67,4 @@ abstract class Controller
         $this->data['siteData'] = $data;
     }
 
-    // этот метод нужен для кастыля что бы незабивать лог.... баг  который немогу понять почему он появляется
-    public function js (): void{ }
 }

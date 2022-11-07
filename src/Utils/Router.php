@@ -4,6 +4,9 @@ namespace App\Utils;
 
 class Router
 {
+    /**
+     * @throws \Exception
+     */
     // тут старт
     public function process()
     {
@@ -13,21 +16,20 @@ class Router
             $controller = $action[0];
             // Определяем это у нас название метода
             $method = $action[1];
-            //Смотрем какой у нас метод и путь контролера
+            // Смотрим какой у нас метод и путь контролера
 //          var_dump($method . ' - ' . $controller);
             // Создаем контролер
             $object = new $controller;
             // Запускаем метод
             $object->$method();
-
             // запускаем базовый шаблон
             $object->getView();
+
     }
 
 
 
     /**
-     * Комментарий для phpstorm что бы понимал эксепшоны
      * @throws \Exception
      */
     // Разбивает url сылку и возрашает массивом название контролера и метода.
@@ -64,7 +66,7 @@ class Router
             throw new \Exception('Нет метода: "' . $method  . '" в классе: ' . '"' . $controller . '"', 404);
         }
 
-        // Возрашаем полный путь контролера и название метода в массиве.
+        // Возвращаем полный путь контролера и название метода в массиве.
         return [$controller, $method];
     }
 }

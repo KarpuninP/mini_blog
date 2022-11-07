@@ -152,3 +152,18 @@ main form select, datalist {           /* обрашение к форме чт�
     margin-bottom: 10px;
 
 }
+
+/* modal */
+
+.btn {
+    margin-left: 5px;
+}
+
+/* disable field */
+.disabled {
+    background-color: #DCDCDC;
+    color: #000000;
+    opacity: 1;
+    pointer-events: none;
+}
+

@@ -17,48 +17,53 @@
     <div class="album py-5" >
         <div class="container">
             <!-- начало-->
-            <div class="my-3 p-3 bg-body rounded shadow-sm">
-                <!-- оглавление-->
-                <nav id="navbar-example2" class="navbar bg-light px-3 mb-3">
-                    <p class="navbar-brand"><?= $siteData['textDb']['tag'];?></p>
-                    <ul class="nav nav-pills">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Быстрый переход</a>
-                            <ul class="dropdown-menu">
-                                <!-- меню-->
-                                <?php $i=0;?>
-                                <?php foreach ($siteData['textDb'] as $data) { ?>
-                                    <!-- для увеличение ссылки на 1 (имя)-->
-                                    <?php $i+=1;?>
-                                    <?php if (isset($data['index'])) { ?>
-                                         <li><a class="dropdown-item" href="#scrollspyHeading<?=$i;?>"> <?= $data['index'];?></a></li>
+            <?php if (isset($siteData['textDb']['tag'])) {?>
+                <div class="my-3 p-3 bg-body rounded shadow-sm">
+                    <!-- оглавление-->
+    <!--                --><?php //var_dump($siteData);?>
+                    <nav id="navbar-example2" class="navbar bg-light px-3 mb-3">
+                        <p class="navbar-brand"><?= $siteData['textDb']['tag'];?></p>
+                        <ul class="nav nav-pills">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Быстрый переход</a>
+                                <ul class="dropdown-menu">
+                                    <!-- меню-->
+                                    <?php $i=0;?>
+                                    <?php foreach ($siteData['textDb'] as $data) { ?>
+                                        <!-- для увеличение ссылки на 1 (имя)-->
+                                        <?php $i+=1;?>
+                                        <?php if (isset($data['index'])) { ?>
+                                             <li><a class="dropdown-item" href="#scrollspyHeading<?=$i;?>"> <?= $data['index'];?></a></li>
+                                        <?php } ?>
                                     <?php } ?>
-                                <?php } ?>
 
-                                <!-- прелесть в низ-->
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#scrollspyHeading500">Перейти вниз</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </nav>
-                <!-- тело сообщение-->
-                <div data-bs-spy="scroll" data-bs-target="#navbar-example2" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="scrollspy-example bg-light p-3 rounded-2" tabindex="0">
-                    <?php $i=0;?>
-                    <?php foreach ($siteData['textDb'] as $data) { ?>
-                        <!-- для увеличение сылки на 1 (имя)-->
-                        <?php $i+=1;?>
-                         <?php if (isset($data['comment'])) { ?>
-                            <h4 id="scrollspyHeading<?=$i;?>"><?=$data['index'];?></h4>
-                            <p><?= $data['comment'];?></p>
-                            <!-- Редактирование поста, возможно тока если админ зайдет-->
-                            <a class="edit float-md-end" href="#" >редактировать</a>
+                                    <!-- прелесть в низ-->
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#scrollspyHeading500">Перейти вниз</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </nav>
+                    <!-- тело сообщение-->
+                    <div data-bs-spy="scroll" data-bs-target="#navbar-example2" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="scrollspy-example bg-light p-3 rounded-2" tabindex="0">
+                        <?php $i=0;?>
+                        <?php foreach ($siteData['textDb'] as $data) { ?>
+                            <!-- для увеличение сылки на 1 (имя)-->
+                            <?php $i+=1;?>
+                             <?php if (isset($data['comment'])) { ?>
+                                <h4 id="scrollspyHeading<?=$i;?>"><?=$data['index'];?></h4>
+                                <p><?= $data['comment'];?></p>
+                                <!-- Редактирование поста, только для зарегистрированных $siteData['textDb']['tag']-->
+                                 <?php if (isset($_SESSION['isLogin'])) { ?>
+                                    <a class="edit float-md-end" href="edit/?postId=<?=$data['id'];?>&type=<?=$siteData['nameTable'];?>&themes=<?=$siteData['textDb']['tag'];?>">редактировать</a>
+                                <?php } ?>
+                            <?php } ?>
                         <?php } ?>
-                    <?php } ?>
-                    <!-- ссылка что бы перейти на низ странице-->
-                    <h4 id="scrollspyHeading500"></h4>
+                        <!-- ссылка что бы перейти на низ странице-->
+                        <h4 id="scrollspyHeading500"></h4>
+                    </div>
                 </div>
-            </div>
+            <?php } ?>
             <!-- конец-->
         </div>
     </div>

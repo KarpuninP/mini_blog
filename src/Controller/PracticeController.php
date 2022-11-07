@@ -2,10 +2,11 @@
 
 namespace App\Controller;
 
-
-
 class PracticeController extends TypeController
 {
+    /**
+     * @throws \Exception
+     */
     // Главная страница (тема)
     public function index()
     {
@@ -20,12 +21,12 @@ class PracticeController extends TypeController
             'descriptionPage' => 'Выводится практическая запись, тех или иных технологий',
         ];
 
-        // В массив $data мы добовляем в конец то что пришло от метода dbData
-        // В методе dbData приходит массив с данными для отображение для сайта и массив с нумерацией страниц
+        // В массив $data мы добавляем в конец то что пришло от метода dbData
+        // В методе dbData приходит массив с данными для отображения для сайта и массив с нумерацией страниц
         $data = array_merge($data, $this->dbData('practice', $index));
 
         // Проверяем все ли в порядке
-//        debug($data);
+//       debug($data);
 
         // обязаловка для возврата странице
         // мета данные
@@ -37,5 +38,4 @@ class PracticeController extends TypeController
         // возвращает к подключению шаблон и передача данных
         $this-> view('main.main', $data);
     }
-
 }

@@ -9,7 +9,7 @@ class TypeController extends Controller
 {
     public function  __construct()
     {
-        // если нужено в конструкторе что то добавить пишем это
+        // если нужно в конструкторе, что-то добавить пишем это
         parent::__construct();
         // Подключаем название модельки
         $this->nameModal = new Blog();
@@ -27,6 +27,7 @@ class TypeController extends Controller
         $data['page'] = $theoryData->tag($themes);
         // Засовываем в массив, то что нам надо выдать данные из бд
         $data['textDb'] = $theoryData->load($themes, $index);
+        $data['nameTable'] = $themes;
         // Проверяем то что получилось
 //        var_dump($data);
         // Возвращаем массив данных

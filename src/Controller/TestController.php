@@ -4,30 +4,32 @@ namespace App\Controller;
 use App\Model\Test;
 use App\Utils\App;
 use App\Utils\Base\Controller;
-use App\Model\Blog;
 use App\Utils\Cache;
 
 
 class TestController extends Controller
 {
 
-    // Так выклядит стандартная страница
+    // Так выглядит стандартная страница
     public function index()
     {
-
+//       var_dump($_SERVER);
+//        var_dump($_POST);
+        //debug($_SERVER);
+        $this->onlyData = $_POST;
         // смена шаблона
-        $this->layout='dark_blog';
-        // обезаловка для возрата странице
+//        $this->layout='dark_blog';
+
         // мета данные
-        $this-> setMeta (
+        $this->setMeta(
             'Главная страница',
             'тут содержится данные про сдачу собеседование',
             'Собеседование на php, ответы на собеседование'
         );
-        // возрашает к подключение шаюлон и передача данных
+        // возвращает к подключению шаблон и передача данных
         $this-> view('giglet_main', []);
 
-        // что бы воспользоватся данными которые передал, в вид ставляем это. Все данные находятся в масиве по обрашению $siteData['']
+        // Что бы воспользоваться данными которые передал, в вид вставляем это. Все данные находятся в массиве по обращению $siteData['']
         //<?=$siteData['a'];
     }
 
@@ -35,23 +37,23 @@ class TestController extends Controller
     public function server(): void
     {
         // получить полость всю сылку
-        var_dump($_SERVER['REQUEST_URI']);
+//        var_dump($_SERVER['REQUEST_URI']);
+        debug($_SERVER['REQUEST_URI']);
         // получить Гет параметр
-        var_dump($_GET);
+//        var_dump($_GET);
         // получить Пост параметр
-        var_dump($_POST);
+//        var_dump($_POST);
         echo 'Наш адрес: ' . PATH;
     }
 
-    //подключение страници
+    //подключение страница
     public function db(): void
     {
-
         // запуск модельки
         $model = new Test();
 
-        // Обрашение к разным методам с помошю гет параметра
-        // запуск метода по ключу масива /test/db?q
+        // Обращение к разным методам с помощь гет параметра
+        // запуск метода по ключу массива /test/db?q
         if ($_GET) {
             $get = key($_GET);
             // проверка если есть этот метод в контролере, то идем дальше
@@ -64,10 +66,10 @@ class TestController extends Controller
 
     public function cache(): void
     {
-        // то что есть у нас в контенере для примера засовываем в переменную, что бы потом поместить в кеш
+        // то что есть у нас в контейнере для примера засовываем в переменную, что бы потом поместить в кеш
        $container = App::$app->getProperties();
 
-       // обрашаемся к статическому методу кеша
+       // обращаемся к статическому методу кеша
        $cache = Cache::instance();
        // создаем кеш, название по которому можно к нему обращаться и что туда ложем
       $cache->set('test', $container, 2);

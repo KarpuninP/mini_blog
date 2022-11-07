@@ -25,7 +25,13 @@
             <div class="container">
                 <div class="right-login">
                     <!-- откроется модальное окно / использовать js -->
-                    <a href="#" class="login" data-bs-toggle="modal" data-bs-target="#staticBackdrop">Sign in/up</a>
+
+                    <?php if (!isset($_SESSION['isLogin'])) { ?>
+                        <a href="" class="login" data-bs-toggle="modal" data-bs-target="#staticBackdrop">Sign in/up</a>
+                    <?php } else { ?>
+
+                        <a href="/sign/logOut" class="login" ><span style="color: #dc3545"><?= $_SESSION['isLogin'];?> </span>Выйти</a>
+                    <?php } ?>
                 </div>
 
                 <h1>Подготовка к собеседованию на PHP разработчика</h1>
@@ -47,11 +53,13 @@
                                     <a class="nav-link" href="/">Теория</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="practice">Практика</a>
+                                    <a class="nav-link" href="<?=PATH;?>practice">Практика</a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="add">Добавить</a>
-                                </li>
+                                <?php if (isset($_SESSION['isLogin'])) { ?>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="<?=PATH;?>add">Добавить</a>
+                                    </li>
+                                <?php } ?>
                             </ul>
                         </div>
                     </div>
@@ -68,10 +76,10 @@
                 <div class="navbar-inner">
                     <div class="container-fluid ">
                         <div class="container d-flex justify-content-evenly" >
-                            <a id="b" href="#" >Об авторе</a>
-                            <a href="#" >Резюме</a>
-                            <a href="#" >Git</a>
-                            <a href="#" >Контакты</a>
+                            <a href="https://www.linkedin.com/in/pasha-karpunin-php-developer/" >Linked In</a>
+                            <a href="https://drive.google.com/file/d/1kFFqk3jLNddWAl8uNWE3x1n01AZZ581-/view?usp=sharing" >Резюме</a>
+                            <a href="https://github.com/KarpuninP" >Git</a>
+                            <a href="https://t.me/Amedomaro" >Telegram</a>
                         </div>
                     </div>
                 </div>
@@ -82,16 +90,17 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="staticBackdropLabel">Регистрация</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="staticBackdropLabel" ></h5>
+                        <button type="button"  class="btn-close close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <a id="modal" href="modal" >Резюме</a>
-                        <?php var_dump($_GET);?>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary">Understood</button>
-                    </div>
+                        <div class="modal-text"></div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary close"  data-bs-dismiss="modal" >Close</button>
+                            <div class="button-modal"</div>
+
+                        </div>
                 </div>
             </div>
         </div>
