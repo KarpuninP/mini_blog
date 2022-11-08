@@ -1,145 +1,144 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 |...............................................................................................|
-|------------------- Инструкция / алгоритм как я создал свой cms на базе mvc -------------------|
+|------------------- Instruction / algorithm how I created my cms based on mvc -------------------|
 |...............................................................................................|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
----------------------------------------- Содержание ---------------------------------------------
+---------------------------------------- Content ---------------------------------------------
 
-1) Настройка окружение "Docker - Compose"
-2) Шаблон
-3) Создание MVC и само построение на приложение
+1) Setting up the environment "Docker - Compose"
+2) Template
+3) Creation of MVC and construction itself for the application
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
------------------------------------------ Основа -----------------------------------------------
+----------------------------------------- The basis -----------------------------------------------
 
 -----------------------------------------
-1) Настройка окружение "Docker - Compose"
+1) Setting up the environment "Docker - Compose"
 -----------------------------------------
-Определяемся что нам надо для нашего cms. А это сервер, возмем nginx. Сам язык интерпретатора php-fpm, и mysql.
-Вообшем ставим что то подобное LEMP
-https://maddot.ru/kak-ustanovit-lemp-v-ubuntu-20-04.html
-Дальше нам нужен git и composer......
+We decide what we need for our cms. And this is the server, let's take nginx. The php-fpm interpreter language itself, and mysql.
+In general, we put something like LEMP
+Next we need git and composer......
 
 ---------------
 a) docker-compose.yml
 ---------------
-Создаем файл с названием docker-compose.yml и в нем пишем
-# так обозначаются комментарии
-# С начало ставим версию докер композера
+Create a file called docker-compose.yml and write in it
+# this is how comments are marked
+# From the beginning we set the version of the docker composer
 version: '3.7'
 
-# Тут дальше идет какие мы сервисы хотим запустить.Так назваемая инструкция
-# Название сервисов может быть любыми, но что бы было логически понятно какие там инструкции будут php: или mysql:
+# Here we go further what services we want to run. The so-called instruction
+# The name of the services can be anything, but to make it logically clear what instructions there will be php: or mysql:
 services:
-# Ставим сервер
+# Set up a server
   nginx:
     build:
-    # Указываем путь, где находятся настройки(правела установки) сервера
+    # Specify the path where the settings (installation rules) of the server are located
       context: ./docker/nginx
     volumes:
-    # Прописываем путь к нашему проекту и контейнера, где ./ это является путь обращение этой папки на компе.
-    # Двоеточие означает "к"  наш комп : виртуалка
+    # We write the path to our project and container, where ./ is the path to access this folder on the computer.
+    # Colon means "to" our computer : virtual machine
       - ./:/var/www/app
     ports:
-    # Прописываются порты. Что бы был такой адрес https://locallhost/ надо использовать 80 порт
+    # Registered ports. To have such an address https://locallhost/ you need to use port 80
       - "80:80"
 
-# Дальше у нас идет интерпретатора языка
-    php-fpm:
+# Next we have a language interpreter
+    php fpm:
         build:
-         # Указываем путь, где находятся настройки(правела установки) интерпретатора языка php
+         # Specify the path where the settings (installation rules) of the php language interpreter are located
           context: ./docker/php-fpm
         volumes:
-        # Прописываем путь к нашему проекту и контейнера, где ./ это является путь обращение этой папки на компе.
-        # Двоеточие означает "к"  наш комп : виртуалка
+        # We write the path to our project and container, where ./ is the path to access this folder on the computer.
+        # Colon means "to" our computer : virtual machine
           - ./:/var/www/app
         environment:
-        # настройка XDEBUG для убунту/ phpstorm. Путь прописан к обращению .env файлу
+        # setup XDEBUG for ubuntu/phpstorm. The path is written to the .env file
           PHP_IDE_CONFIG: serverName=${SERVER_NAME}
         env_file:
-        # путь для .env там находятся настройки/пароли/и т.д. нашего окружение. Эта строка работает для всего
+        # path for .env there are settings/passwords/etc. our environment. This line works for everything
           - .env
         networks:
           default:
-          # Указываем ip для взаимодействия приложений между собой
+          # Specify ip for applications to interact with each other
             ipv4_address: ${PHP_FPM_IP}
 
-# Далее идет у нас База данных mysql
+# Next comes mysql database
     mysql:
-    # Берем готовую сборку с https://hub.docker.com/
-        image: mysql:8.0
+    # We take the finished assembly from https://hub.docker.com/
+        image:mysql:8.0
         environment:
-        # Задаем имя DATABASE и рутовский пароль. Он хранится в .env файле
+        # Set the DATABASE name and root password. It is stored in .env file
           MYSQL_DATABASE: ${DB_NAME}
           MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-          # Задавать настройку, подробности тут
+          # Set the setting, details here
           # https://dev.mysql.com/doc/refman/8.0/en/upgrading-from-previous-series.html#upgrade-caching-sha2-password-root-account
         command: --default-authentication-plugin=mysql_native_password
         volumes:
-        # БД будет хранится в докере
+        # The database will be stored in docker
           - mysql_data:/var/lib/mysql
-          # копирование команд бд в папку вируализации (типа минималка которая должна быть на виртуализации таблица и заполнение ее)
+          # copying database commands to the virtualization folder (such as the minimum table that should be on the virtualization table and filling it)
           - ./init.sql:/docker-entrypoint-initdb.d/init.sql
         ports:
-        # В каких портах работает 1 к 1
+        # In which ports does 1 to 1 work
           - "3306:3306"
         networks:
           default:
-          # ip адрес для взаимодействия между программ. Он хранится в .env файле
+          # ip address for interaction between programs. It is stored in .env file
             ipv4_address: ${MYSQL_IP}
 
-# Далее идет правела по взаимодейсвию между программ
-    networks:
-      default:
-      #  по системе bridge совершается конекшон
-        driver: bridge
-        ipam:
-          config:
-          # нетворк между контенерами
-            - subnet: ${NETWORK_SUBNET}
-    volumes:
-    # бд хранится в докере
-      mysql_data:
+# Next comes the rules for the interaction between programs
+     networks:
+       default:
+       # connection is made over the bridge system
+         driver:bridge
+         ipam:
+           config:
+           # network between containers
+             - subnet: ${NETWORK_SUBNET}
+     volumes:
+     # db is stored in docker
+       mysql_data:
 
 ---------------
-b) Настройка nginx в docker/nginx
+b) Setting up nginx in docker/nginx
 ---------------
 ---
-В Dockerfile пишем это
+We write this in the Dockerfile
 ---
-    # Задаем архетиктура из докерхаба https://hub.docker.com/
+    # Set architecture from dockerhub https://hub.docker.com/
 FROM nginx:1.21-alpine
-    # указываем настройки копируются с- в
+    # specify the settings are copied from - to
 COPY ./conf.d /etc/nginx/conf.d
-    # Указываем рабочию дерекцию в виртуалке
+    # Specify the working directory in the virtual machine
 WORKDIR /var/www/app
 
 ---
-Далее настройки нашего сервера они находятся в папке docker/nginx/conf.d/
-Создаем фаил default.conf и пишем это
+Further, our server settings are located in the docker/nginx/conf.d/ folder
+Create a default.conf file and write this
 ---
-# Этот блок означает что мы будем обслуживать какой-то хост
+# This block means that we will serve some host
 server {
-# слушаем порт постоянно. (рабочий порт)
+# listen on the port all the time. (working port)
     listen 80;
-# Какие файлы считать по дефолту начальными что открыть
+# What files to consider by default initial what to open
     index index1.php index.html;
-# Наш адрес url
+# Our url
     server_name 127.0.0.1 localhost;
-# С какой папкой работать. Где старт/ точка входа /Путь где будет искать index...
+# Which folder to work with. Where start/ entry point / Path where index... will look for...
     root /var/www/app/public;
 
-# Все запросы будут делатся только на index.php (обработка / )
+# All requests will only be made to index.php (handling / )
     location / {
-# Проверяет если не index.php то перенаправляет на index.php
+# Checks if not index.php then redirects to index.php
         try_files $uri /index.php?$args;
     }
 
-# Так как у нас нет в nginx php то благодоря композеру указываем путь на него (Обработка php )
+# Since we do not have php in nginx, thanks to the composer, we indicate the path to it (php processing)
     location ~ \.php$ {
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
         fastcgi_pass php-fpm:9000;
@@ -154,40 +153,40 @@ server {
 
 
 ---------------
-c) Настройка интерпретатора языка php в docker/php-fpm
+c) Setting up the php language interpreter in docker/php-fpm
 ---------------
 ---
-В Dockerfile пишем это
+We write this in the Dockerfile
 ---
-# Задаем архетиктура из докерхаба https://hub.docker.com/
+# Set the architecture from dockerhub https://hub.docker.com/
 FROM php:7.4-fpm-alpine
 
-# Запускаем команды для дополнительной установки доп. программ (все то же самое что писать в командной строке в линуксе)
+# Run commands for additional installation of add. programs (all the same as writing on the command line in Linux)
 RUN apk update && apk add unzip autoconf g++ make \
     && pecl install xdebug \
     && docker-php-ext-install pdo_mysql && docker-php-ext-enable xdebug
 
-# переименовываем фаил
+# rename the file
 RUN mv $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 
-# копируем с нашей папке в виртуалку настройки
+# copy from our folder to the virtual machine settings
 COPY ./conf.d /usr/local/etc/php/conf.d
 COPY www.conf /usr/local/etc/php-fpm.d/
 
-# даем рутовские права (что бы было возможно создавать и удалять)
+# give root rights (so that it would be possible to create and delete)
 USER 1000:1000
 
-# Рабочая директория
+# Working directory
 WORKDIR /var/www/app
 
 ---
-Создаем фаил www.conf это конфигурационный файл для нашего php
+Create a www.conf file this is the configuration file for our php
 ---
 [www]
-user = www-data
+user=www-data
 group = www-data
-clear_env = no
-listen = 9000
+clear_env=no
+listen=9000
 pm = dynamic
 pm.max_children = 5
 pm.start_servers = 2
@@ -195,74 +194,74 @@ pm.min_spare_servers = 1
 pm.max_spare_servers = 3
 
 ---
-Создаем файл xdebug.ini в папке docker/php-fpm/conf.d
+Create xdebug.ini file in docker/php-fpm/conf.d folder
 ---
 [xdebug]
 
 xdebug.start_with_request = yes
 xdebug.discover_client_host = 1
-# Для хоршого отображение
+# For good display
 xdebug.mode= debug, develop
-# порт стандарт 9003
-xdebug.client_port= 9003
-#  172.17.0.1 хост для удаленной отладки ifconfig ишем раздел docker0:
-xdebug.client_host= 172.17.0.1
-# что бы подсветка была красивая
+# port standard 9003
+xdebug.client_port=9003
+# 172.17.0.1 remote debug host ifconfig look for docker0 partition:
+xdebug.client_host=172.17.0.1
+# so that the backlight is beautiful
 integer xdebug.cli_color = 1
-# Принцепи это есть в env файл но решил еше сюда добавить
+# In principle, this is in the env file, but I decided to add it here
 xdebug.idekey= PHPSTORM
 
 
 ---------------
-d) Файл .env
+d) .env file
 ---------------
-В файле .env  тут у нас хранятся настройки/ пароли именно для нашей рабочей среды. При необходимости мы можем его легко изменить
+In the .env file, here we store the settings / passwords specifically for our working environment. We can easily change it if necessary.
 
-# Настройки MySQL для входа
+# MySQL login settings
 DB_PASSWORD=test
 DB_NAME=app
 
-# нетворк между контенерами
+# network between containers
 NETWORK_SUBNET=172.25.0.0/24
 PHP_FPM_IP=172.25.0.3
 MYSQL_IP=172.25.0.6
 
-# настройки XDEBUG для убунту/ phpstorm
+# XDEBUG settings for ubuntu/ phpstorm
 SERVER_NAME=www
 
-Создаем фаил .env-example для гита, там будет пример настроек
+Create a .env-example file for git, there will be an example of settings
 
 ---------------
-d) Файл init.sql
+d) init.sql file
 --------------
 ---
-Создаем файл init.sql для нашей бд что бы создалось первоначальные база данных для работы с нашем приложение
+We create an init.sql file for our database to create the initial database to work with our application
 ---
 
 CREATE USER 'admin'@'172.25.0.6' IDENTIFIED BY 'test';
 GRANT ALL ON *.* TO 'admin'@'172.25.0.6';
 FLUSH PRIVILEGES;
-# Если нажна таблица вот пример как ее создать в коментарии
-# CREATE TABLE test (
-#                          id int auto_increment primary key,                           col1 datatype,
-#                         tile varchar(255) not null
-# );
+# If you need a table, here is an example of how to create it in the comment
+# CREATE TABLE test(
+# id int auto_increment primary key, col1 datatype,
+# tile varchar(255) not null
+#);
 # INSERT INTO test(tile)
-#      VALUES
-#       ('text1'), ('text2');
+#VALUES
+# ('text1'), ('text2');
 
 ---------------
-e) Файл .gitignore
+e) The .gitignore file
 --------------
 ---
-Ну тут все просто. Файлы которые недолжны попасть в гитхаб
+Well, everything is simple. Files that shouldn't be in github
 ---
 .idea/
 .env
 vendor/
 
 ---------------
-f) Файл composer.json
+f) Composer.json file
 --------------
 {
   "authors": [
@@ -283,35 +282,34 @@ f) Файл composer.json
     "gabordemooij/redbean": "dev-master"
   }
 }
-
 ---------------
-g) Структура папок проекта
+g) Project folder structure
 --------------
 src -> Controllers
 .... -> Models
-.... -> Utils
-tmp-> cache
+.... ->Utils
+tmp->cache
 view -> errors
 .... -> layouts
 .... -> main
-vendor - (автоматически появится)
+vendor - (will automatically appear)
 public -> pic
   .... -> css
   .... -> js
 config
 
-Это первоначальная струкрура папок, далее мы будем добовлять по мере необходимости
+This is the initial folder structure, we will add more as needed.
 ---------------
-h) Запуск "Docker - Compose"
+h) Run "Docker - Compose"
 --------------
-Для запуска сначала билдем что бы создать образ
-#       docker-compose build
+To run the build first to create an image
+# docker-compose build
 
-Это делается один раз что бы создать образ, можно конечно сразу его запустить с помошю команды docker-compose up --build
-Но иногда происходит артефакты. Поэтому просто сначало билд. Потом запуск
-#       docker-compose up
+This is done once to create an image, you can, of course, immediately run it using the docker-compose up --build command
+But sometimes artifacts occur. So just build first. Then launch
+# docker-compose up
 
-Для проверки в файле index.php вставляем этот код
+To check in the index.php file, paste this code
 ---
 
 // phpinfo();
@@ -321,564 +319,631 @@ h) Запуск "Docker - Compose"
 //$c->foo = 'bar';
 //$c->file = fopen( '/etc/passwd', 'r' );
 //var_dump(
-//    array(
-//        array(TRUE, 2, 3.14, 'foo'),
-//        'object' => $c
-//    )
+// array(
+// array(TRUE, 2, 3.14, 'foo'),
+// 'object' => $c
+// )
 //);
 
 ---
-Проверяем что все работает, все ок !!!
-Теперь устанавливаем composer, что бы все зависимости и автолоудер у нас работал
-#       composer install
+We check that everything works, everything is OK !!!
+Now install composer so that all dependencies and autoloader work for us
+# composer install
 
-Появляется папочка vendor, значит все ок, все установилась.
-Что бы обновить свои данные там, даме команду
-#       composer dumpautoload
+The vendor folder appears, which means everything is OK, everything is installed.
+To update your data there, give the command
+# composer dumpautoload
 
-Когда все закончили работу, останавливаем докер.
-#       docker-compose down
+When everyone has finished the work, we stop the docker.
+# docker-compose down
 
 ---------------
-i) Настройка IDE PhpStorm для адекватного работы xdebug
+i) Setting up the PhpStorm IDE for xdebug to work properly
 ---------------
-Инструкция настройки PhpStorm. Для нашего случая инструкция немного изменена
+PhpStorm setup instructions. For our case, the instruction has been slightly modified.
  https://blog.denisbondar.com/post/phpstorm_docker_xdebug
 
- File — Settings -Build, Execution, Deployment» — Docker
- Проверяем что бы был нажат плюсик name = Docker, Connect to Doc.... = Unix socket
+ File - Settings -Build, Execution, Deployment" - Docker
+ Check that the plus sign is pressed name = Docker, Connect to Doc.... = Unix socket
  Connection successful
 
- File — Settings - PHP
- Выбираем нашу версию пышки которая указана в Docker Compose
- Справа от CLI Interpreter нажмите кнопку с тремя точками.
- В открывшемся окне CLI Interpreters нажмите плюс слева вверху и выберите там From Docker….
- Далее нужно выбрать Docker Compose
- Сервер = докер
- конфигурационный файл указав наш путь к docker-compose.yml
-в сервисе выберем php-fpm
- Далее ок
+ File - Settings - PHP
+ We select our version of donut which is specified in Docker Compose
+ To the right of the CLI Interpreter, click the button with three dots.
+ In the CLI Interpreters window that opens, click the plus at the top left and select From Docker….
+ Next you need to select Docker Compose
+ Server = docker
+ config file specifying our path to docker-compose.yml
+select php-fpm in the service
+ Next ok
 
- В открывшимся окне задаем имя нашего Docker Php 8.0, рядом ставим галочку visible only for this....
- Далее галочка в Connect to existent container
- И у нас внизу должно быть все указано если нет то нажимает ок и можем проделать все то же самое (добавить)
- но ставим php-cli опцию Always start a new container
- По идеи, что то должно произойти и оно должно все отобразить
+ In the window that opens, set the name of our Docker Php 8.0, next to it, check the box visible only for this....
+ Next checkbox Connect to existent container
+ And we should have everything below, if not, then press ok and we can do the same (add)
+ but set the php-cli option Always start a new container
+ According to the idea that something should happen and it should display everything
 
- Path mappings берется из docker-compose.yml (проверяем путь в этом окне File — Settings - PHP )
- Папка на локальном где лежит наш проэкт vs папка которая записано в docker-compose.yml куда перекидывает наш проэкт
+ Path mappings is taken from docker-compose.yml (check the path in this window File - Settings - PHP )
+ The folder on the local where our project is located vs the folder that is written in docker-compose.yml where our project is transferred
 
- File — Settings - PHP - Debug. И нажмите на ссылку Validate.
-  должны указать полный путь к web-корню (в нашем примере это подкаталог проекта public)
- адрес сервера (в нашем примере порт 80 контейнера nginx укажите обязательно его http://127.0.0.1,или например, http://127.0.0.1:8080). Нажмите Validate.
- Это проверка настроено все верно да или нет.
+ File - Settings - PHP - Debug. And click on the Validate link.
+  must specify the full path to the web root (in our example, this is the public subdirectory of the project)
+ server address (in our example, port 80 of the nginx container, be sure to specify it http://127.0.0.1, or for example, http://127.0.0.1:8080). Click Validate.
+ This check is configured everything is correct yes or no.
 
- File — Settings - PHP - Servers нажмите плюсик, чтобы добавить новый.
- Укажите имя сервера www (должно совпадать с переменной окружения PHP_IDE_CONFIG в docker-compose.yml) и хост 127.0.0.1.
-Пропишете или проверти мапинг  /var/www/app
+ File - Settings - PHP - Servers click the plus sign to add a new one.
+ Specify the server name www (should match the PHP_IDE_CONFIG environment variable in docker-compose.yml) and host 127.0.0.1.
+Write or check the mapping /var/www/app
 
- В главном меню Run перейдите в Edit configurations…
- Нажмите плюсик вверху слева и выбирайте PHP Web page. Укажите имя для данной страницы, например, WWW,
- затем укажите сервер, с которым связана эта страница (мы создали его на предыдущем шаге) и нажмите OK.
+ From the main Run menu go to Edit configurations…
+ Click the plus sign at the top left and select PHP Web page. Specify a name for this page, for example, www,
+ then specify the server this page is associated with (we created it in the previous step) and click OK.
 
-Проверяем работу xdebug
-Теперь приступаем к работе.
+Checking the work of xdebug
+Now let's get to work.
 
 
 -----------------------------------------
-2) Шаблон
+2) Template
 -----------------------------------------
-Теперь нам нужен шаблон, что бы на него одеть нашу cms
-Но для начало нам надо продумать сайт что там будет и как он будет выглядеть.
-На листочке бумаге рисуем все что хотим, а дальше по ходу дорабатываем.
-Будем использовать Bootstrap
+Now we need a template to put on our cms
+But first, we need to think about the site, what will be there and how it will look.
+We draw everything we want on a piece of paper, and then we refine it along the way.
+Let's use Bootstrap
 
 ---------------
-a) Главная страница
+a) Main page
 --------------
-Тут все просто, делим сайт на шаблон (то что неизменно, нав и футер) и вид (это середина, которая будет постоянно меняться)
-1) Берем стандарт с сайта Bootstrap
-2) подключаем шрифт стили js
-4) Создаем <header> тут будет у нас логиниться, потом главное название проекта <h1> и navbar.
-Его берем из стандартного шаблона Bootstrap и немного обновляем и подправляем, подводим до себя.
-5) Создаем середину сайта main тут у нас будет все динамически меняться, так как это блог сюда выставим типа одной карточки
-с переходами по темам. Но для начало поместим сверху название, что это за раздел  <h2> потом сам блог(карточку).
-Затем переходы на следующею страницу и подняться быстро на верх.
-6) Создаем <footer> тут все просто, все стандартно.
+Everything is simple here, we divide the site into a template (what is unchanged, nav and footer) and a view (this is the middle, which will constantly change)
+1) We take the standard from the Bootstrap website
+2) we include font styles js
+4) Create <header> here we will log in, then the main name of the project <h1> and navbar.
+We take it from the standard Bootstrap template and update and tweak it a bit, bring it to ourselves.
+5) We create the middle of the main site here we will have everything dynamically changing, since this is a blog here we will put up the type of one card
+with transitions by topic. But first, let's put the title on top, what kind of <h2> section is this, then the blog itself (card).
+Then jumps to the next page and climb quickly to the top.
+6) Create <footer> everything is simple here, everything is standard.
 
 ---------------
-b) Главная страница
+b) Main page
 --------------
-Добовляем вкладку добавить это у нас будет видом, немного подправляем и изменяем предыдущею страницу.
-В середину добавляем поля и все наш шаблонщик готов.
-Дальше по ходу, что-то подправим, если будет надо....
+We add a tab to add this, we will have a view, we tweak a little and change the previous page.
+We add fields in the middle and our template is ready.
+Further along the way, we will correct something, if necessary ....
 
 -----------------------------------------
-3) Создание MVC и само построение на приложение
+3) Creation of MVC and construction itself for the application
 -----------------------------------------
-Мы запостили и проверяли работоспособность нашего окружение, теперь будем писать наше ядро приложение !!!
+We started and checked the performance of our environment, now we will write our core application !!!
 
 ---------------
-а) Часть первая написание MVC создания ядра приложение "Начальные файлы, создание роутер"
+a) Part one writing MVC core application creation "Initial files, creating a router"
 --------------
-Создаем стартовый класс и от туда будем писать роутер.
-Так как все стартует с public/index.php
-там пишем стандартный код:
-Вывод ошибок
+We create a start class and from there we will write a router.
+Since everything starts with public/index.php
+there we write the standard code:
+Error output
 ---
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 ---
 
-Подключение автолоудера
+Connecting an autoloader
 ---
 require __DIR__ . '/../vendor/autoload.php';
 ---
-В нем мы добавили 2 файла
-config/init.php      ---   Фаил конфигурации для легкого кодирование (тут у нас константы с путями и немного конфигурации) См сам файл, за подробностями.
-helpers.php          ---   Дополнительные функции которые могут пригодиться для всего приложение. См сам файл, за подробностями.
-Эти файлы доступны везде так как они подключены к нашему индексу, они вспомогательные.
+In it we added 2 files
+config/init.php --- Configuration file for easy coding (here we have constants with paths and some configuration) See the file itself for details.
+helpers.php --- Additional functions that may be useful throughout the application. See the file itself for details.
+These files are available everywhere because they are connected to our index, they are auxiliary.
 
-Дальше создаем класс new App(); в папке src/Utils . В этом файле будут поочередно запускаться все наши классы которые
-и будет состоять наше приложение.
-В конструкторе стартуем сессию, и создаем класс роутера
+Next we create a class new App(); in the src/Utils folder. In this file, all our classes will be run in turn, which
+and will consist of our application.
+In the constructor, we start the session and create a router class
 ---
 public function __construct()
     {
-        // Стартуем сессию
+        // Start session
         session_start();
-        // Подключаем наш роутер (маршрутизатор)
+        // Connect our router (router)
         $router = new Router();
-        // Запускаем метод
+        // Run the method
         $router->process();
     }
 ---
-Создаем наш Router в папке src/Utils
-Метод process() отсюда будет стартовать наш роутер. Принцип прост, разбиваем нашу сылку на контролер и метод.
+Create our Router in the src/Utils folder
+The process() method will start our router from here. The principle is simple, we break our snare into a controller and a method.
 
-Получаем PATH от ссылки, разбиваем ссылку на массив по элементам. 0 ключ - это пустота, 1 - контролер, 2 - экшон(метод)
-Формируем полный неймспейс класса, если нечего не пришло, то тогда будет HomeController, если что-то пришло по сылке,
-значит прописываем полный путь к этому файлу, название ставим заглавной буквы и добавляем слово Controller
-Далее проверяем существует ли этот класс у нас, если нет кидаем эксепшон.
-Теперь дело за методом. Если нечего по сылке не пришло, значит подставляем метод index. А если пришло, то значит его
-Потом проверяем есть ли в классе этот метод. И все это закидываем в метод getAction(), который возвращает массив из
-класса и метода.
+We get PATH from the link, break the link to the array by elements. 0 key is empty, 1 is controller, 2 is action(method)
+We form a full namespace of the class, if nothing came, then there will be a HomeController, if something came by force,
+then we write the full path to this file, put the name in capital letters and add the word Controller
+Next, we check whether this class exists with us, if not, we throw an exception.
+Now it's up to the method. If nothing came by the snare, then we substitute the index. And if it came, then it means
+Then we check whether this method exists in the class. And we throw all this into the getAction () method, which returns an array from
+class and method.
 
-В методе process() мы запускаем метод getAction() и получаем массив класса с методом, что нам надо запустить.
-Подставляем и запускаем.
-Проверяем на работоспособность, создав при этом HomeController и TestController
-
----------------
-b) Часть вторая написание MVC создания ядра приложение "Модуль с ошибками"
---------------
-Создаем class ErrorHandler в src/Utils Этот класс будет отвечать за обработку ошибок на нашем приложении
-В  __construct() пишем логику отображении ошибок, если мы в продакшене их не отображаем. А если в разработке отображаем.
-Далее запускаем callback функцию set_exception_handler(); и в нем мы запускаем наш метод exceptionHandler
-и передаем через callback функцию ошибка которая пришла.
-Далее запускаем в ней 2 метода:
-logErrors() --- Создает лог файл в папке /tmp/errors.log и туда помешает в красивой форме какие ошибки произошли.
-displayError() --- Он проверяем в каком режиме мы в разработке или продакшоне. Если в продакшене, то в случае ошибки
-перекидывает нас на страничку 404 /errors/404.template.php
-Если режиме разработки то красиво показывает ошибку в красивой форме /errors/dev.template.php
-Иначе если мы в продакшене и это не 404 ошибка то выводит для пользователя другую страницу с ошибки /errors/prod.template.php
-
-Что бы узнать в каком мы режиме в файле config/init.php указана константа DEBUG. Она в true или false
-
----
-коды ошибок для указания какая ошибка что означает
-https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
----
-
-1xx: Informational (информационные):
-100 Continue («продолжай»)
-101 Switching Protocols («переключение протоколов»)
-102 Processing («идёт обработка»);
-103 Early Hints («ранняя метаинформация»);
-2xx: Success (успешно):
-200 OK («хорошо»)
-201 Created («создано»)
-202 Accepted («принято»)
-203 Non-Authoritative Information («информация не авторитетна»)
-204 No Content («нет содержимого»)
-205 Reset Content («сбросить содержимое»)
-206 Partial Content («частичное содержимое»)
-207 Multi-Status («многостатусный»)
-208 Already Reported («уже сообщалось»)
-226 IM Used («использовано IM»).
-3xx: Redirection (перенаправление):
-300 Multiple Choices («множество выборов»)
-301 Moved Permanently («перемещено навсегда»)
-302 Moved Temporarily («перемещено временно»), 302 Found («найдено»)
-303 See Other («смотреть другое»);
-304 Not Modified («не изменялось»);
-305 Use Proxy («использовать прокси»);
-306 — зарезервировано (код использовался только в ранних спецификациях);
-307 Temporary Redirect («временное перенаправление»);
-308 Permanent Redirect («постоянное перенаправление»).
-4xx: Client Error (ошибка клиента):
-400 Bad Request («неправильный, некорректный запрос»);
-401 Unauthorized («не авторизован (не представился)»);
-402 Payment Required («необходима оплата»);
-403 Forbidden («запрещено (не уполномочен)»)
-404 Not Found («не найдено»);
-405 Method Not Allowed («метод не поддерживается»);
-406 Not Acceptable («неприемлемо»);
-407 Proxy Authentication Required («необходима аутентификация прокси»)
-408 Request Timeout («истекло время ожидания»);
-409 Conflict («конфликт»)
-410 Gone («удалён»)
-411 Length Required («необходима длина»)
-412 Precondition Failed («условие ложно»)
-413 Payload Too Large («полезная нагрузка слишком велика»)
-414 URI Too Long («URI слишком длинный»)
-415 Unsupported Media Type («неподдерживаемый тип данных»)
-416 Range Not Satisfiable («диапазон не достижим»)
-417 Expectation Failed («ожидание не удалось»)
-418 I’m a teapot («я — чайник»);
-419 Authentication Timeout (not in RFC 2616) («обычно ошибка проверки CSRF»);
-421 Misdirected Request
-422 Unprocessable Entity («необрабатываемый экземпляр»);
-423 Locked («заблокировано»);
-424 Failed Dependency («невыполненная зависимость»);
-425 Too Early («слишком рано»);
-426 Upgrade Required («необходимо обновление»);
-428 Precondition Required («необходимо предусловие»)
-429 Too Many Requests («слишком много запросов»)
-431 Request Header Fields Too Large («поля заголовка запроса слишком большие»)
-449 Retry With («повторить с»)[1];
-451 Unavailable For Legal Reasons («недоступно по юридическим причинам»)
-499 Client Closed Request (клиент закрыл соединение);
-5xx: Server Error (ошибка сервера):
-500 Internal Server Error («внутренняя ошибка сервера»)
-501 Not Implemented («не реализовано»)
-502 Bad Gateway («плохой, ошибочный шлюз»)
-503 Service Unavailable («сервис недоступен»)
-504 Gateway Timeout («шлюз не отвечает»)
-505 HTTP Version Not Supported («версия HTTP не поддерживается»)
-506 Variant Also Negotiates («вариант тоже проводит согласование»)
-507 Insufficient Storage («переполнение хранилища»);
-508 Loop Detected («обнаружено бесконечное перенаправление»)
-509 Bandwidth Limit Exceeded («исчерпана пропускная ширина канала»);
-510 Not Extended («не расширено»);
-511 Network Authentication Required («требуется сетевая аутентификация»)
-520 Unknown Error («неизвестная ошибка»)
-521 Web Server Is Down («веб-сервер не работает»)
-522 Connection Timed Out («соединение не отвечает»);
-523 Origin Is Unreachable («источник недоступен»)
-524 A Timeout Occurred («время ожидания истекло»);
-525 SSL Handshake Failed («квитирование SSL не удалось»)
-526 Invalid SSL Certificate («недействительный сертификат SSL»)
+In the process() method, we run the getAction() method and get an array of the class with the method we need to run.
+Substitute and run.
+We check for operability, while creating HomeController and TestController
 
 ---------------
-c) Часть трития написание MVC создания ядра приложение "Создание контейнера"
+b) Part two writing MVC core application creation "Module with bugs"
 --------------
-Создаем trait TSingletone - Этот трейл будет реализовывать нам патерн Singletone, создает один раз объект.
-Так как мы недолжные создать более чем одного объекта данного класса. Для этого мы создаем свойства приватное,
-это свойства заполняем объектом, если его там нет. Пишем логику если у нас свойства текущего класса пуста null
-то тогда мы в него положим объект данного класса. И вернем это свойство обратно (там всегда будет этот класс обЪекта
-который подключен этот trait)
-Создаем наш class Registry к нему подключаем trait TSingletone и создаем наш контейнер для свойств
+Create class ErrorHandler in src/Utils This class will be responsible for error handling on our application
+In __construct() we write the logic for displaying errors if we do not display them in production. And if we display in development.
+Next, we run the callback function set_exception_handler(); and in it we run our exceptionHandler method
+and pass the error that came through the callback function.
+Next, we run 2 methods in it:
+logErrors() --- Creates a log file in the /tmp/errors.log folder and writes there in a nice way what errors happened.
+displayError() --- It checks which mode we are in development or production. If in production, then in case of an error
+redirects us to the 404 page /errors/404.template.php
+If the development mode then beautifully shows the error in a beautiful form /errors/dev.template.php
+Otherwise, if we are in production and this is not a 404 error, then it displays another page for the user with the error /errors/prod.template.php
+
+To find out what mode we are in, the DEBUG constant is specified in the config/init.php file. She's true or false
+
+---------------
+c) Part of tritium writing MVC core creation application "Container Creation"
+--------------
+Create trait TSingletone - This trail will implement the Singletone pattern for us, it creates an object once.
+Because we don't have to create more than one object of a given class. To do this, we create properties private,
+these properties are filled with an object if it is not there. We write logic if our properties of the current class are empty null
+then we will put an object of this class into it. And return this property back (there will always be this object class
+which connected this trait)
+We create our class Registry, connect trait TSingletone to it and create our container for properties
  protected static $properties = [];
-Мы будем туда засовывать то что есть в файле config/params.php и добавлять дополнительные параметры(свойства) в этот контейнер
-по мере надобности.
-В class Registry пишем 3 метода:
-setProperty() --- Добавить свойства
-getProperty() --- Получить от туда свойства
-etProperties()--- Просмотреть все свойства, что там есть
-В файле config/params.php по мере необходимости будем его заполнять. Для теста напишем это:
+We will put what is in the config/params.php file there and add additional parameters (properties) to this container
+as needed.
+We write 3 methods in class Registry:
+setProperty() --- Add properties
+getProperty() --- Get properties from there
+etProperties()--- View all properties that are there
+We will fill it in the config/params.php file as needed. Let's write this for testing:
 ---
-return [
+return[
     'admin_email' => 'admin@gmail.com',
-    'site_name' => 'Блог для подготовки php собеседований'
+    'site_name' => 'Blog for preparing php interviews'
 ];
 ---
-В class App запускаем через этот регистр
+In class App we launch through this register
 ---
-        // Подключаем наш реестр (в нем мы можем хранить все наши параметры)
+        // We connect our registry (we can store all our parameters in it)
         self::$app = Registry::instance();
-        // Вызываем getParams что бы заполнить контейнер Registry::instance данными
+        // Call getParams to populate the Registry::instance container with data
         $this->getParams();
 ---
-и там же создаем еше один метод getParams() что бы засунуть параметры config/params.php в контейнер, о чем мы говорили
-ранее. С начало подключаем их потом через цикл добавляем self::$app->setProperty($k,$v);
+and in the same place we create one more getParams() method to put the config/params.php parameters into the container, which we talked about
+previously. From the beginning we connect them, then through the loop we add self::$app->setProperty($k,$v);
 
 
 ---------------
-d) Часть четвертая написание MVC создания ядра приложение "Работа с Cache"
+d) Part four writing the MVC core application "Working with Cache"
 --------------
-Кеш нам нужен, что бы не так сильно грузить нашу бд и производительность сайта
-Создаем class Cache в папке src/Utils подключаем trait TSingletone что бы создался только один раз
-И создаем 3 метода установить кеш set(), получить кеш get() и удалить кеш delete()
-- При созданье кеша set($key, array $data, int $seconds = 3600)
-мы задаем ключ (это название самого файла, предварительно зашифруем его с помощь md5 )
-далее идет то что мы туда хотим положить оно идет массивом ну и на сколько времени в секундах по умолчанию 3600сек = 1 час
-Ложем этот файл в папочку tmp/сache
-- При получении  get(string $key) мы ищем этот файл, декодируем его и проверяем дата еше не устарела, если устарела, значит
-файл уже не годен. И возвращаем false. При выходе делаем логику, пример в src/Controllers/TestController->cache()
-- При удалении delete() просто удаляем этот кеш, если он существует.
+We need a cache so that our database and site performance are not so heavily loaded
+We create a class Cache in the src/Utils folder and include the trait TSingletone so that it is created only once
+And we create 3 methods to set the cache set(), get the cache get() and delete the cache delete()
+- When creating cache set($key, array $data, int $seconds = 3600)
+we set the key (this is the name of the file itself, we will first encrypt it with md5 )
+then comes what we want to put there, it goes in an array, and for how long in seconds by default 3600sec = 1 hour
+Put this file in tmp/cache folder
+- When getting get(string $key) we look for this file, decode it and check if the date is not yet out of date, if it is out of date, then
+the file is no longer valid. And return false. On exit, we make logic, an example in src/Controllers/TestController->cache()
+- When deleting delete() just delete this cache if it exists.
 
-Пример работы с кешом смотрим в src/Controllers/TestController->cache()
-
----------------
-e) Часть пятое написание MVC создания ядра приложение "Базовый контролер"
---------------
-От базового контролера идут все остальные контролеры, поэтому он будет у нас абстрактным.
-Создаем abstract class Controller в папке src/Utils/Base. В нем пишем 4 свойства, которые будут принимать в себя данные.
-В конструкторе мы помешаем в свойства data параметры, что бы можно было воспользоваться ими во фронтенте.
-Создаем 3 свойства:
-- getView() --- запускает класс new View и передает туда параметры: название шаблона, Название папки, где хранится вид и
-метеоданные. Дальше запускаем метод во View->show($this->data) передав туда данные которые надо передать во фронтенд.
-- setMeta() --- Создаем массив метеоданных и засовываем в свойства.
-- view() --- Передает название папки вида и данные в свойства класса
+See src/Controllers/TestController->cache() for an example of working with cache
 
 ---------------
-f) Часть шестая написание MVC создания ядра приложение "Базовый вид"
+e) Part five writing MVC core application "Base controller"
 --------------
-Это базовый вид которые рендеринг страничку во фронтенд и передает туда данные, все осуществляется через контролер.
-Создаем class View в папке src/Utils/Base. В нем пишем 4 свойства, которые будут принимать в себя данные.
-В конструкторе получаем эти данные из базового контролера и передаем в свойства класса.
-Проверяем шаблон layout пишем логику через тернальный оператор. Если с контролера что-то пришло в $layout(true )
-значит его передаем, иначе передаем, то что в константе.
-Пишем 2 метода:
-- show($data) --- Этот метод запускается от контролера. Его главная задача редериг страничку и передает данные на фронтенд.
-Он принимает в себя дату, то что передали с контролера массив. В нем переводим все в переменную(ключ= название переменой).
-Дальше мы делим на работу с видом(template) и работу со шаблоном(layout).
-Вид(template)--- Проверяем пришло ил что-то в template и мы находимся в режиме разработчика? Если нечего не прешло и режим
-DEBUG, значит в вид подключаем шаблон, что такой стр нет. Иначе перекидываем название вида. А если условия не соблюдены
-типа режим продакшене, то выкидываем ошибку.
-Далее формируем путь для видео и проверяем есть ли такой файл с таким названием. Включаем буферизацию и передаем на
-фронтенд, если что-то не то, выкидываем ошибку.
-Шаблон(layout)--- Проверяем что-то пришло, формируем путь до шаблона. Проверяем есть ли такой файл, если нет то выкидываем
-ошибку. Подключаем его. Если что-то не так, то выкидываем ошибку
-- getMeta() --- формируем html код для мета и подставляем туда что пришло. Возвращаем на страничку
+All other controllers come from the base controller, so it will be abstract for us.
+We create an abstract class Controller in the src/Utils/Base folder. In it we write 4 properties that will accept data.
+In the constructor, we will put parameters in the data properties so that we can use them in the frontend.
+We create 3 properties:
+- getView() --- launches the new View class and passes parameters there: template name, name of the folder where the view is stored and
+weather data. Next, we run the method in View->show($this->data) passing there the data that needs to be passed to the frontend.
+- setMeta() --- Create an array of weather data and put it in the properties.
+- view() --- Pass the view folder name and data to class properties
 
 ---------------
-g) Часть седьмая написание MVC создания ядра приложение "Папочка view"
+f) Part six writing the MVC core application "Basic view"
 --------------
-Работа с нашеми страницами (вид/шаблон)
-структура папок и файлов
-view -> errors (тут находятся шаблоны с ошибками)
-.... -> layouts (наш шаблоны, то что не меняется/темы изменение типа ночной дневной вид)
-.... -> main ( главная страница вида (то что в середине) и поеследуюшие папки это наш будет вид)
-.... -> giglet_main.template.php (заглушка)
-Тут все просто в наш шаблон в папке layouts просто подставляем данные и верезаем середину (вид) то что будет динамическая
-часть сайта они будут находится по папкам
+This is the basic view that renders the page to the frontend and passes data there, everything is done through the controller.
+We create a class View in the src/Utils/Base folder. In it we write 4 properties that will accept data.
+In the constructor, we get this data from the base controller and pass it to the class properties.
+We check the layout template and write logic through a ternary operator. If something came from the controller to $layout(true )
+then we pass it, otherwise we pass what is in the constant.
+We write 2 methods:
+- show($data) --- This method is run from the controller. Its main task is to render the page and send data to the frontend.
+It accepts the date that was passed from the controller to the array. In it, we translate everything into a variable (key = name of the variable).
+Further, we divide into work with the view (template) and work with the template (layout).
+View(template)--- Check if something came in template and we are in developer mode? If nothing has passed and the regime
+DEBUG, it means that we include a template in the view that there is no such page. Otherwise, we throw the name of the species. And if the conditions are not met
+type production mode, then we throw out an error.
+Next, we form the path for the video and check if there is such a file with the same name. Enable buffering and send to
+frontend, if something is wrong, we throw out an error.
+Template(layout)--- Check something came, form the path to the template. Check if there is such a file, if not, throw it away
+error. We connect it. If something is wrong, then throw an error
+- getMeta() --- generate html code for meta and substitute what came in there. Returning to the page
 
 ---------------
-h) Часть восьмая написание MVC создания ядра приложение "Базовая модель"
+g) Part seven writing the MVC core application "daddy view"
 --------------
-Нужна для работы с бизнес логикой и с нашей бд
-Для начало нам надо подключится к нашей бд, так как мы используем библиотеку RedBeanPHP
-С помощью композера устанавливаем библиотеку RedBeanPHP
-Дальше создаем class Db в папке src/Utils подключаем к нему use trait TSingletone
-И в конструкторе подключаем наш конфигурационный файл (config_db.php) для бд в нем
+Working with our pages (view/template)
+folder and file structure
+view -> errors (there are templates with errors)
+.... -> layouts (our templates, what doesn't change/themes change type to night/day view)
+.... -> main (the main page of the view (the one in the middle) and subsequent folders, this will be our view)
+.... -> giglet_main.template.php (stub)
+Everything is simple here in our template in the layouts folder, just substitute the data and cut out the middle (view) what will be dynamic
+part of the site they will be located in folders
+
+---------------
+h) Part eight writing the MVC core application "Base Model"
+--------------
+Needed to work with business logic and our database
+First we need to connect to our database, since we use the RedBeanPHP library
+Using the composer, install the RedBeanPHP library
+Next, create a class Db in the src / Utils folder, connect use trait TSingletone to it
+And in the constructor we connect our configuration file (config_db.php) for the database in it
 ---
-return [
+return[
     'dsn' => 'mysql:host=172.25.0.6;dbname=app;charset=utf8',
     'user' => 'root',
     'pass' => 'test',
 ];
 ---
-Далее подключаемся к бд подставляя данные, проверка подключили или нет, запись в лог.
-Большинство функций RedBeanPHP на продакшене не нужны, поэтому дальше пишем в логике проверку, если в продакшене
-то замораживает ненужные функции.
+Next, we connect to the database, substituting the data, checking whether it is connected or not, writing to the log.
+Most of the RedBeanPHP functions are not needed in production, so we write further in the logic a check if in production
+It freezes unnecessary functions.
 
-Потом создаем abstract class Model в папке src/Utils/Base.
-Ее делаем абстрактной в конструкторе подключаем наш class Db.
+Then we create an abstract class Model in the src/Utils/Base folder.
+We make it abstract in the constructor, we connect our class Db.
 
 ---------------
-i) Создание нашего блога......
+i) Creating our blog......
 --------------
-Наше ядро создано, теперь создаем:
-1) контролеры
-2) обложку
-3) модельку
-4) убеждаемся что все работает и начинаем дорабатывать систему...
+Our kernel is created, now we create:
+1) controllers
+2) cover
+3) model
+4) we make sure that everything works and begin to refine the system ...
 
 ---------------
 i.1)  Controller
 --------------
-Так как начало мы забили на HomeController extends Controller с него мы начнем. В каждом контролере должна быть обезательная
-заполненая запись.
+Since we scored the beginning on HomeController extends Controller, we will start with it. Each controller must have a mandatory
+completed record.
 ---
-      // мета данные
-      $this-> setMeta (
+      // meta data
+      $this->setMeta(
           'title',
           'desc',
           'keywords'
       );
-      //  подключает шаблон и передача данных на внешний вид
+      // connects the template and passing data to the view
       $this-> view('main.main', $data);
 ---
 
-Делаем еше один контролер для теста всего cms и функционала class TestController extends Controller
-Тестируем и испытываем, см. сам контролер
+We make one more controller for testing the entire cms and functionality class TestController extends Controller
+We test and test, see the controller itself
 
 ---------------
-i.2)  layouts/view
+i.2) layouts/view
 --------------
-Когда у нас контролер есть и мы проверели функционал на работуспособность, подключаем внешний вид сайта
-В папочке layouts у нас 2 файла. Если нам надо сменить тему/оформление (светлую/темную) нашего шаблона. Для проверки
-просто меняем бэкграунт на темный
-Теперь ставим середину, в папочке main это будет главная страница, в папочке add это будет добавить запись в бд
-Разбиваем код, и добовляем в файл. Для ошибок создаем середину (вид) giglet_main.template.php там мы будем распечатывать
-консоль команд в бд.
-Тестем все на работоспособность с помощь контролера TestController.
+When we have a controller and we checked the functionality for operability, we connect the appearance of the site
+In the layouts folder we have 2 files. If we need to change the theme/design (light/dark) of our template. For check
+just change the background to dark
+Now we put the middle, in the main folder it will be the main page, in the add folder it will add an entry to the database
+We split the code and add it to the file. For errors, we create the middle (view) giglet_main.template.php there we will print
+command console in db.
+We test everything for performance with the help of the TestController controller.
 
 ---------------
-i.3)  Model
+i.3) Model
 --------------
-Теперь будем работать с нашей бд
-Создаем 2 модельки class Blog extends Model --- для нашего cms  и class Test extends Model  --- для теста redbeanphp
-Тестируем функционал/ возможности redbeanphp
+Now we will work with our database
+Create 2 models class Blog extends Model --- for our cms and class Test extends Model --- for the redbeanphp test
+Testing the functionality / features of redbeanphp
 
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-i.4)  Продолжение работы/ основная разработка нашего приложение
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Убедились что все работает продумать как все будет выглядеть (бизнес логика) ---постоянно переписывая код---
-Разбиваем задачи на модули(функционал) и добавляем его постепенно в наш проект. Когда убедились что эта реализация
-подходит, после этого записали эту реализацию в конспект.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+i.4) Continued work / main development of our application
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Making sure everything works think about how everything will look like (business logic) --- constantly rewriting the code ---
+We divide tasks into modules (functionality) and add it gradually to our project. When we were convinced that this implementation
+suitable, after that we wrote down this implementation in the abstract.
 ---------------
-План разбития подзадач
+Subtask Breakdown Plan
 --------------
-1) Добавления записи в бд
-    a) Создание контролера
-    b) Проверка приходит данных и чем "метод start()"
-    c) Передача валидированых данных в модель "Метод add"
-    d) Валидация данных "Метод validation"
-    e) Переход в модель(бд) Создание таблици
-2) Вывод информации на странице сайта
-    a) Получение из бд - метод load
-    b) вывод на вьюшку
-    c) Тема тега или выбор страниц
-    d) Обшей контролер "TypeController"
+1) Adding an entry to the database
+    a) Creating a Controller
+    b) Checking data comes and than "start() method"
+    c) Passing validated data to the model "Method add"
+    d) Data validation "Method validation"
+    e) Transition to model (db) Creation of tables
+2) Displaying information on the site page
+    a) Getting from the database - the load method
+    b) view output
+    c) Subject tag or page selection
+    d) General controller "TypeController"
     e) HomeController
     f) PracticeController
-
-
----------------
-i.4.1.a) Добавления записи в бд "Создание контролера"
---------------
-Создаем контролер class AddController extends Controller в папке src/Controller
-Для загрузки данных что бы можно с ними работать и понять как система будет вообще работать, так сказать архитектура
-В конструкторе добавляем в свойства новый класс моделька new Blog() что бы можно было работать с бд.
-Так как в нашем роутере все методы начинаются с index(), это наш стартовый метод.
-Так как один метод может запускать и страничку и добавляет данные в бд, мы ставим проверку каким запросом пришло
-Если гет, значит вопрошаем рендеринг странички. Если постом, то получаем данные, валидируем, отправляем в модельку
-и получаем ответ ок или не ок и на основе этого пишем сообщение как все прошло.
-
----------------
-i.4.1.b) Добавления записи в бд "метод start()"
---------------
-Когда получили данные постом то, запускаем метод start()
-Проверяем что какая кнопка была нажата $_POST['send'] или $_POST['dell'] и должно что-то прийти, потом проверка на пустоту
-Если в массиве нечего нет то возвращаем пустою строку. Вызываем соответсвующий метод и передаем туда эти данные.
-Если проверка не пройдена, выкидываем эксепшон.
-На кнопке $_POST['dell'] делаем метод dell($type, $postId); а в самом методе пустышку, для проверки работоспособности.
+3) Registration, login, modal window. Working with js
+    a) Adding a modal window to the "light_blog.template.php" template
+    b) Writing a js/jquery script to register or login "main.js"
+    c) Connecting templates for registration and login "ModalController"
+    d) Templates for registration and login
+    e) Working with the user (registration, login, validation, session) "SignController"
+    f) Working with the user in the database "Blog"
+4) Editing / deleting a post, editing session templates
+    a) Editing .template.php templates
+    b) Creating an "EditController" controller
+    c) Adding edit, remove and findPost method to 'class Blog extends Model'
 
 ---------------
-i.4.1.c) Добавления записи в бд "Метод add"
+i.4.1.a) Adding an entry to the "Create controller" database
 --------------
-Метод add создает или обновляем таблицу. Для начало мы реализуем создание таблици....
-Сразу в нем мы валидируем пришедшие нам данные в методе validation
-Потом то пришло от метода validation мы перекидываем все в модельку Blog() метод create и передаем туда проваледированые данные
+Create a controller class AddController extends Controller in the src/Controller folder
+To load data so that you can work with them and understand how the system will generally work, so to speak, the architecture
+In the constructor, we add a new model class new Blog () to the properties so that we can work with the database.
+Since all methods in our router start with index(), this is our start method.
+Since one method can launch a page and add data to the database, we check which request came
+If get, then we ask the rendering of the page. If by post, then we get the data, validate it, send it to the model
+and we get the answer ok or not ok and based on this we write a message how everything went.
 
 ---------------
-i.4.1.d) Добавления записи в бд "Метод validation"
+i.4.1.b) Adding an entry to the database "method start()"
 --------------
-Метод validation тут идет проверка данных.
+When we received the data by post, we run the start () method
+We check that which button was pressed $_POST['send'] or $_POST['dell'] and something should come, then check for emptiness
+If there is nothing in the array, then we return an empty string. We call the corresponding method and pass this data there.
+If the check fails, we throw out the exception.
+On the button $_POST['dell'] we make the method dell($type, $postId); and in the method itself a dummy, to check the performance.
 
 ---------------
-i.4.1.e) Добавления записи в бд или переход в модель(бд) Создание таблици "Метод create"
+i.4.1.c) Adding an entry to the database "Method add"
 --------------
-Теперь переходим к файлу в папке src/Model/class Blog extends Model
-Создаем метод create, мы будем использовать метод many to many в Redbean. Создаем таблицу и подставляем данные, возрашаем id таблици
-Примечание в документации, может вернуть строку.
-Так как тег у нас повторяется, используем findOrCreate.
+The add method creates or updates a table. To begin with, we will implement the creation of tables ....
+Immediately in it, we validate the data that came to us in the validation method
+Then it came from the validation method, we throw everything into the Blog () model, the create method and pass the validated data there
 
 ---------------
-i.4.2) Вывод информации на странице сайта
+i.4.1.d) Adding an entry to the database "validation method"
 --------------
-Заполнили данные в таблицу, теперь выводим эти данные в разделе в "Теория" и "Практика"
-Вывод данных на страницу. Будем выводить по темам определенного раздела. Темы это нормер id в теги. И это будет
-у нас страница. Сделаем главный контролер, его назовем TypeController, тут будет все обшие и из него будев  переходить в
-HomeController и PracticeController. Дальше все передается в шаблом/вьюшку.
-
+The validation method here is data validation.
 
 ---------------
-i.4.2.a) Вывод информации на странице сайта "Получение из бд - метод load"
+i.4.1.e) Adding an entry to the database or passing to the model (db) Creating tables "Method create"
 --------------
-В HomeController мы дергаем нашу модельку Blog метод load($themes, $index), где $themes - это название колонки (теория/практика)
-а $index - это id тега, которую тематику мы будем загружать. По умолчанию будет равной 1.
-В class Blog extends Model, который находится в src/Model. Создаем метод load. В нем мы сначала создаем динамическое
-название свойств. Далее загружая список тегов, который есть в бд. Проходимся по этому списку(массив) циклом через foreach,
-формируя новый массив который состоит из id и переформатируя в обычный массив(убираем бимы).
-Далее проверяем что есть такое число, которое получили с id массива. Если нет, то $index = 1.
-Далее проверка есть у выбранного бина свойства получаем true или false. Если нету значит этот тег не принадлежит к этому разделу
-После всех проверок мы проходимся по массиву(бина) циклом и создаем новый массив данных которые должны передать во вьюшку,
-предварительно переведя его в обычный массив.
-Добавляем к этому массиву, что за тег выбран. Все возвращаем.
+Now go to the file in the folder src/Model/class Blog extends Model
+We create the create method, we will use the many to many method in Redbean. Create a table and substitute data, return table id
+Note in the documentation, may return a string.
+Since we repeat the tag, we use findOrCreate.
 
 ---------------
-i.4.2.b) Вывод информации на странице сайта "Вывод на вьюшку"
+i.4.2) Displaying information on the site page
 --------------
-В HomeController, то что получили выводим во вьюшку в main.template.php. С помошью цикла подставляем данные и тестим.
+We filled in the data in the table, now we display this data in the section in "Theory" and "Practice"
+Output data to the page. We will display on the topics of a certain section. Topics is the id number of the tags. And it will
+we have a page. Let's make the main controller, let's call it TypeController, everything will be common here and it will go from it to
+HomeController and PracticeController. Then everything is passed to the template/view.
 
 ---------------
-i.4.2.c) Вывод информации на странице сайта "Тема тега или выбор страниц"
+i.4.2.a) Displaying information on the site page "Getting from the database - load method"
 --------------
-Так как в таблице тегов там идут темы в таблицу теории и практики, надо отсортировать их и это будет наши страници выбора внизу
-Для этого, в модельке Blog, метод tag, мы сначало проверим, что за тему странице нам прейдёт. И от этой темы загрузим промежуточную
-таблицу. Если нет такой, то выдадим ошибку.
-Загружаем эту промежуточную таблицу id, уделяем повторяющиеся элементы и обнуляем ключи массива. С помощью цикла приводим этот массив
-в красивый вид. И отправляем обратно в контролер. Там мы помешаем это в массив $data['page'] и передаем во вьюшку.
-Во вьюшке (main.template.php) там где выбор странице с помощью цикла подставляем, где ключ это номер странице, а значение
-будет у нас гет параметром.
-И получается нажимая на номер странице мы будем дергать id который приедет через гет парамер заданной темы!
+In the HomeController, we pull our Blog model with the load($themes, $index) method, where $themes is the name of the column (theory/practice)
+and $index is the id of the tag we'll be loading the theme. The default will be 1.
+In class Blog extends Model which is in src/Model. We create the load method. In it, we first create a dynamic
+property name. Further loading the list of tags which is in a DB. Loop through this list (array) through foreach,
+forming a new array that consists of id and reformatting it into a regular array (we remove beams).
+Next, we check that there is such a number that we received with the array id. If not, then $index = 1.
+Further, the selected property bean has a check, we get true or false. If not, then this tag does not belong to this section.
+After all the checks, we go through the array (bin) in a loop and create a new array of data that must be transferred to the view,
+after converting it to a regular array.
+Add to this array what tag is selected. We return everything.
 
 ---------------
-i.4.2.d) Вывод информации на странице сайта "Обшей контролер - TypeController"
+i.4.2.b) Displaying information on the site page "Output to view"
 --------------
-Так как код одинаковый будет что в HomeController и PracticeController мы создадим TypeController
-И общий код положим туда
-В конструкторе добавим модельку $this->nameModal = new Blog();
-В методе dbData мы будем работать с моделькой и вызовем метод tag и load в модельке. Все это красиво засунем в массив и вернем.
-В методе getReqParam проверяет Гет параметр
+In the HomeController, what we got is displayed in the view in main.template.php. With the help of a loop, we substitute the data and test.
 
 ---------------
-i.4.2.e) Вывод информации на странице сайта "HomeController"
+i.4.2.c) Displaying information on the site page "Tag subject or page selection"
 --------------
-class HomeController extends TypeController это у нас главная страница контролера, тут у нас будет вывод теории.
-Мы вызовем метод getReqParam он в TypeController. Этот метод проверяет что бы что-то пришло в гет параметре.
-Если там пусто он выдаст ключ массива который надо для загрузки заданной странице темы
-Далее мы формируем массив $data сначала туда мы передаем дискрипшон странички, потом с помощь функции array_merge,
-мы соединяем массив. Которые получили при вызове метода dbData в TypeController с массивом $data
-и передаем все во вьюшку. Тестем, все работает ...
+Since in the tags table there are topics in the theory and practice table, you need to sort them and this will be our selection page at the bottom
+To do this, in the Blog model, the tag method, we first check what kind of topic the page will pass to us. And from this topic we will load the intermediate
+table. If it doesn't exist, we'll throw an error.
+We load this intermediate table id, remove the duplicate elements and set the array keys to zero. With the help of a loop, we bring this array
+into a beautiful view. And send it back to the controller. There we put it in the $data['page'] array and pass it to the view.
+In the view (main.template.php) where the page selection is using a loop, we substitute, where the key is the page number, and the value
+will be a get parameter.
+And it turns out by clicking on the page number we will pull the id that will come through the get parameter of the given topic!
 
 ---------------
-i.4.2.f) Вывод информации на странице сайта "PracticeController"
+i.4.2.d) Displaying information on the site page "General Controller - TypeController"
 --------------
-Все то же самое что и в HomeController, только меняем тему странице/название таблице на practice и подставляем данные
-для practice.
+Since the code will be the same, in HomeController and PracticeController we will create a TypeController
+And put the general code there
+In the constructor, add the model $this->nameModal = new Blog();
+In the dbData method, we will work with the model and call the tag and load methods in the model. We put all this beautifully into an array and return it.
+In the getReqParam method checks the Get parameter
 
+---------------
+i.4.2.e) Displaying information on the "HomeController" site page
+--------------
+class HomeController extends TypeController this is our main page of the controller, here we will have the conclusion of the theory.
+We will call the getReqParam method on the TypeController. This method checks for something to come in the get parameter.
+If it is empty, it will return the array key that is needed to load the given theme page.
+Next, we form the $data array, first we pass the page description there, then using the array_merge function,
+we join the array. Which were received when calling the dbData method in the TypeController with the $data array
+and pass everything to the view. Testem, everything works ...
+
+---------------
+i.4.2.f) Displaying information on the "PracticeController" site page
+--------------
+Everything is the same as in HomeController, only we change the theme of the page / table name to practice and substitute the data
+for practice.
+
+---------------
+i.4.3) Registration, login, modal window. Working with js
+--------------
+In this chapter I will add registration, login and session. Adding a new user to the database.
+First, I add a modal window to the main template, connect it, using jqury I make buttons, when I click on
+a certain button is a request for ajax file. And the controller is loaded, which connects the forms (registration or login)
+dalia when filling in data and sending via jquery. The data is validated and sent to the server to the controller
+via post.
+The controller takes it all, validates the data and sends it to the model. The model creates a user table, adds it or
+checks if there is such a user, then writes to the session that there is such a user and change the inscription in the template that the user is logged in,
+if you click on this inscription again, the session is deleted
+
+---------------
+i.4.3.a) Adding a modal window to the "light_blog.template.php" template
+--------------
+ЗWe go to the bootstrap site and take the shape of the modal window from there. Insert it at the very bottom of our template
+ view->layouts->light_blog.template.php override js strip
+ We correct it a little and add additional classes.
+ We connect it by the link where we should have registration. With the help of bootstrap classes
+ <a href="" class="login" data-bs-toggle="modal" data-bs-target="#staticBackdrop">Sign in/up</a>
+
+ ---------------
+ i.4.3.b) Writing a js/jquery script to register or login "main.js"
+ --------------
+ Create main.js file in public->js folder
+  - We write in the function when everything is loaded, we issue the theme, text and buttons of the modal window. First thing to see
+ user.
+  - We create an ajax function, it accepts a url for the controller (which one will be launched). Get request goes if everything is ok
+ (controller is started) let's go to the response, in our case it will be the response of the html form for the body of the modal window.
+  - Registration function
+ When you click on the register button, the name of the window theme changes and a request is made via ajax (a function called ajax) with
+ given url 'modal/signUp' ( see point i.4.3.c) we get the registration form. Next we display the submit button.
+ When you click on the submit button, we get the field data.
+ Next, we go through the validation of this data:
+     - Email verification. If the validateEmail function is true, then we hide the error if it was there, and write down what
+       turned into the emailCheck variable. Otherwise, we highlight an error under the water field. function validateEmail(email) -
+       accepts email, searches for a match of all characters in the string that was given.
+     - Password verification. If the validatePass(pass) function is true, then we hide the error if it was there and write
+       what happened to the passOk variable. Otherwise, we highlight an error under the water field. validatePass(pass) function -
+       will give true only when the password length is from 5 - 12 characters
+     - Checking repeated password. Password fields 1 and 2 must match, then we passCheck = passOk; write down the password
+       and hide the error. Otherwise, we highlight an error under the water field.
+     - Checking if the data has been entered correctly. If emailCheck and passCheck have something in them, then we run the function
+        SignInUp('Sign/signUp', emailCheck, passCheck); sending this data.
+  - Login function
+  When you click on the login button, the name of the window theme changes and a request is made via ajax (a function called ajax) with
+  given url 'modal/signIn' ( see point i.4.3.c) we get the login form. Next we display the submit button.
+  When you click on the submit button, we get the field data.
+  Next, we go through the validation of this data:
+      - Email verification. If the validateEmail function is true, then we hide the error if it was there, and write down what
+        turned into the emailCheck variable. Otherwise, we highlight an error under the water field. function validateEmail(email) -
+        accepts email, searches for a match of all characters in the string that was given.
+      - Password verification. If the validatePass(pass) function is true, then we hide the error if it was there and write
+        what happened to the passCheck variable. Otherwise, we highlight an error under the water field. validatePass(pass) function -
+        will give true only when the password length is from 5 - 12 characters
+      - Checking if the data has been entered correctly. If emailCheck and passCheck have something in them, then we run the function
+         SignInUp('Sign/signUp', emailCheck, passCheck); sending this data.
+
+  - Function SignInUp(url, email, pass) - accepts a url to register or enter the email controller and a password. She sends
+  ajax data request (email and password) through the post, if everything went well, we receive data from the controller in the body of the modal window
+  - When you click on the close button, the page will reload
+
+---------------
+i.4.3.c) Connecting templates for registration and login "ModalController"
+--------------
+Create class ModalController extends Controller in src/Controller folder. Its action is that
+Returns/includes a template, registration or login.
+- the signUp method connects the registration template 'view/login/login/sign_up.template.php'
+- the signIn method connects the login template 'view/login/login/sign_up.template.php'
+
+---------------
+i.4.3.d) Registration and login templates
+--------------
+Create 2 php files sign_up.template.php and sign_up.template.php in the view/login/login/ folder. In it we copy from bootstrap
+field templates for registration and the same field, the current is slightly changed for the entrance. Slightly changing the template, add a class
+to output errors class="error-pass" for js. Difference between registration and login, one field in registration for re-entry
+password verification.
+
+---------------
+i.4.3.e) Working with the user (registration, login, validation, session) "SignController"
+--------------
+We create a class SignController extends Controller, it will contain the logic of working with users. Entering
+user or checking the user in the database, data validation, session work, etc. All that is user accreditation.
+In the constructor, we connect our database.
+- signIn() method to sign in. The data that we will receive through ajax - post. We immediately transfer them to the method
+validation($_POST) (see below). Next, we check for errors, if there were errors in the validation, if they did, then
+write to the log file and issue a message that there is an error in the login or password. If everything is ok, then we check if such
+email using the emailCheck method in the Blog modal (see i.4.3.f). If the response is null, then there is no such email
+exists, write it to the log and throw out an error that such a user does not exist. And to the user in the modal window
+we conclude that he needs to register.
+If the user array has arrived, then we check the password for compliance (compare). If an error, then highlight and write to the log
+If everything is ok, then we write down the username, in our case, his email in the session.
+- method signUp() registration of a new user. The data that we will receive through ajax - post. We immediately transfer them to the method
+validation($_POST) (see below). Next, we check for errors, if there were errors in the validation, if they did, then
+we go through them in a loop (we collect them in one line) and display on the screen where the user made a mistake. If everything is ok
+then we check if there is such an email using the emailCheck method in the Blog modal (see i.4.3.f). If the response is null,
+it means that there is no such user and we can encrypt his password. And transfer this data to the createUser method in the modal
+Blog (see i.4.3.f), for creating a new user. In return, we will get its id. Next, check if id is 0, then
+something went wrong and the user did not register. Issuing relevant messages
+- the validation() method is used for data validation. We check that the data that came is something, if not, then
+return an empty string. The email must match the format and must come, the password must be more than 5 characters and
+less than 12, the same should be. If there are any errors, then return them, if not, then return the array with the email and password
+- method logOut() this method simply deletes the session with the username and reloads the page.
+---------------
+i.4.3.f) Working with the user in the database "Blog"
+--------------
+In our modal src/Model/class Blog extends Model, we add 2 methods createUser, emailCheck
+- createUser method create a user table with id, email, password fields and save all this by returning the user id.
+- the emailCheck method, we are looking for the user's email, if it is not there, then return null, if there is, then an array of data.
+
+---------------
+i.4.4) Editing / deleting a post, editing session templates
+--------------
+Since we already have registration, and since the current registered user can edit or delete the post.
+We can start editing and adding to the post
+In this chapter, we will create an EditController and add search, edit, and delete posts to our Blog modal.
+We will also edit the templates and css a little.
+---------------
+i.4.4.a) Editing .template.php templates
+--------------
+Since we have an input / logging, we brought it all into the session. And we can show the current those possibilities that
+allowed for admins.
+Editing files in the view folder
+- layouts/light_blog.template.php Where the login is, we write the logic if $_SESSION['isLogin'] is something, then we display the email
+and exit button. Where there is an add button in the menu, we write logic, if there is $_SESSION['isLogin'] then we display the add link.
+- main/main.template.php There's an edit button next to each post. We write logic if there is $_SESSION['isLogin'],
+means we deduce a link and we form it. Create a dynamic get parameter with post id, subject and type.
+- add/add.template.php is a bit trickier here, since one template works on 2 fronts. In the controller (see below) added
+parameter $siteData['link'] if == 'edit' then this is for editing, if == 'add' then for adding. From there we will
+proceed. We write logic on the forms, if we have 'edit' selected, then the forms are blocked and we insert the text that we have chosen in them
+for editing. Otherwise, we write it for addition manually (new post). We also change in css properties what these
+the shapes are locked and change the color of them for beauty. Well, we work with buttons if 'edit' is selected, then the button is below
+editing and deletion. Otherwise, the submit button.
+
+---------------
+i.4.4.b) Creating an "EditController" controller
+--------------
+In this controller, the logic for editing and deleting a post will occur.
+Create a controller in the src/Controller/class folder EditController extends AddController
+It is checked by which method $_SERVER['REQUEST_METHOD'] == 'GET' came, then what has come for data validation is thrown.
+Since we extends AddController we can use the methods of AddController and move on to validation...
+In the AddController method, we tweaked the validation method a bit, since index and comment are not received in the geta.
+After the validation has passed, we look for this post in our database, if we find it, we transfer it to the template. (see above)
+If an error occurs at any stage of the check, we act accordingly.
+When the text is edited, it again goes to check by which method it came, in our case it is already POST.
+We run the start() method in AddController , this method checks which button was pressed and runs the corresponding method
+- The edit method first, we run the received data through the validation method, then we run the edit method in our Blog modal (db)
+- The dell method also goes through the data itself through validation and then passes it to our database using the remove method in our modal Blog
+In both cases, we get id. In EditController we check if the number means ok, if not, then not ok. and output the corresponding
+message. Next, we display the required data for displaying the page setMeta and view
+- The findPost method searches for a post, or rather it runs the findPost method in our Blog modal and returns an array or null
+
+---------------
+i.4.4.c) Adding edit, remove and findPost method in 'class Blog extends Model'
+-------------
+In our modal src/Model/class Blog extends Model, we add 3 methods edit, remove and findPost
+- method edit post editing. Loads the paste and makes a change to it
+- method remove post removal. First finds the post id tag, then generates a dynamic table name and deletes
+connections and the record itself in the database
+- the findPost method finds this post. First, we find the post tag, then we form a dynamic string for the table name and load
+this post is from db.
 ---------------------------------------
-Дальше регистрация
-https://www.youtube.com/watch?v=vvgOPJQA8Zk
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

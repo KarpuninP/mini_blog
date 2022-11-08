@@ -4,56 +4,56 @@ namespace App\Utils;
 
 class Cache
 {
-    // Использовать будем патерн синглтон
+    // We will use the singleton pattern
     use TSingletone;
 
-    // что то запишем
+    // Write to cache
     public function set($key, array $data, int $seconds = 3600): bool
     {
-        // у нас будут отдельные данные и время для того что бы знать устарел кеш да или нет он хранится 1 час ( 3600 сек)
-        if($seconds){
+        // We will have separate data and time to know if the cache is outdated yes or no it is stored for 1 hour (3600 sec)
+        if ($seconds) {
             $content['data'] = $data;
-            // конечное время он будет равен времени плюс количество секунт на которое мы кешируем
+            // The final time it will be equal to the time plus the number of seconds for which we cache
             $content['end_time'] = time() + $seconds;
-            // Дальше мы записываем данные в кеш, шифровать и стерелизуем его
-            if(file_put_contents(CACHE . '/' . md5($key) . '.txt', serialize($content))){
-                // если у нас все получилось мы вернуем true
+            // Next, we write the data to the cache, encrypt and sterilize it
+            if (file_put_contents(CACHE . '/' . md5($key) . '.txt', serialize($content))) {
+                // If we succeeded we will return true
                 return true;
             }
         }
-        // Если у нас нечего не получилось будет false
+        // If we did not succeed, it will be false
         return false;
     }
 
-    // Что то получим
+    // Get cash
     public function get(string $key): array|bool
     {
-        // Получаем этот фаил
+        // Get this file
         $file = CACHE . '/' . md5($key) . '.txt';
-        // проверяем если эти файлы
-        if(file_exists($file)) {
-            // Делаем все обратно и помешаем в переменную
+        // Check if these files
+        if (file_exists($file)) {
+            // We do everything back and interfere with the variable
             $content = unserialize(file_get_contents($file));
-            // Проверяем не устарели ли текушие данные
-            if(time() <= $content['end_time']){
-                // если они не устарели тогда мы их вернем
+            // Check if current data is out of date
+            if (time() <= $content['end_time']) {
+                // If they are not outdated then we will return them
                 return $content['data'];
             }
-            // если проверку не прошли, значит данных нет или они устарели
-            // Удаляем фаил
+            // If the check did not pass, then there is no data or they are outdated
+            // Delete the file
             unlink($file);
         }
-        // Возрашаем если мы невернули контент
+        // If we did not succeed, it will be false
         return false;
     }
 
-    // Удалить кеш. Типо что то обновить (пересобрать надо будет)
+    // Delete cache.
     public function delete($key): void
     {
-        // Получаем путь файлу
+        // Get file path
         $file = CACHE . '/' . md5($key) . '.txt';
-        // если такой фаил сушествует то его удаляем
-        if(file_exists($file)){
+        // If such a file exists, then delete it
+        if (file_exists($file)) {
             unlink($file);
         }
     }

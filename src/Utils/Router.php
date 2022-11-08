@@ -4,67 +4,66 @@ namespace App\Utils;
 
 class Router
 {
-    // тут старт
+    /**
+     * @throws \Exception
+     */
+    // start here
     public function process()
     {
-            // Получаем массив с полным путем контролера и название метода, которые хотим дернуть (получили это все в url)
+            // We get an array with the full path of the controller and the name of the method that we want to pull (we got it all in the url)
             $action = $this->getAction();
-            // Определяем это у нас полный путь контролера
+            // We define it in our full path of the controller
             $controller = $action[0];
-            // Определяем это у нас название метода
+            // We define this as the name of the method
             $method = $action[1];
-            //Смотрем какой у нас метод и путь контролера
+            // We look at our method and path of the controller
 //          var_dump($method . ' - ' . $controller);
-            // Создаем контролер
+            // Create a controller
             $object = new $controller;
-            // Запускаем метод
+            // Run the method
             $object->$method();
-
-            // запускаем базовый шаблон
+            // Run base template
             $object->getView();
     }
 
-
-
     /**
-     * Комментарий для phpstorm что бы понимал эксепшоны
      * @throws \Exception
      */
-    // Разбивает url сылку и возрашает массивом название контролера и метода.
+    // Breaks the url link and returns the name of the controller and method as an array.
     private function getAction(): array
     {
-        // Получаем PATH от ссылки
+        // Getting PATH from a link
         $url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        // Разбиваем ссылку на массив по элементам. 0 ключ - это пустота, 1 - контролер, 2 - экшон(метод)
+        // We split the reference to the array by elements. 0 key is empty, 1 is controller, 2 is action(method)
         $url = explode('/', $url);
-        // Формируем полный неймспейс класса
-        // Если 1 ключ массива будет пустой, то запускаем HomeController
+        // Forming a complete class namespace
+        // If the first array key is empty, then run the HomeController
         if (empty($url[1])) {
             $controller = '\App\Controller\HomeController';
-            // Если там что, то есть, то формируем полный путь этого контролера и пишем с заглавной буквы, и присоединяем слово Controller
+            // If there is something, that is, then we form the full path of this controller and write it with a capital letter, and append the word Controller
         } else {
             $controller = '\App\Controller\\' . ucfirst($url[1]) . 'Controller';
-            // Если такого класса не существует, то выдаем эксепшон (проверка на наличие класса)
+            // If such a class does not exist, then we issue an exception (check for the presence of a class)
             if (!class_exists($controller)) {
-                throw new \Exception('Нет такого класса: ' . '"' . $controller . '"', 404);
+                throw new \Exception('There is no such class: ' . '"' . $controller . '"', 404);
             }
         }
 
-        // Если 2 ключ массива пуст, то метод будет index
+        // If the second array key is empty, then the method will be index
         if (empty($url[2])) {
             $method = 'index';
-            // Иначе название второго масива
+            // Otherwise, the name of the second array
         } else {
             $method = $url[2];
             //var_dump($method);
         }
        // var_dump($method);
-        // (проверка на наличие класса и в нем контролера) Если нет такого метода в классе, то выкидываем эксепшон
+        // If there is no such method in the class, then we throw out the exception
         if (!method_exists($controller, $method)) {
-            throw new \Exception('Нет метода: "' . $method  . '" в классе: ' . '"' . $controller . '"', 404);
+            throw new \Exception('No method: "' . $method  . '" in class: ' . '"' . $controller . '"', 404);
         }
 
-        // Возрашаем полный путь контролера и название метода в массиве.
+        // We return the full path of the controller and the name of the method in an array.
         return [$controller, $method];
     }
 }

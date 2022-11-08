@@ -4,42 +4,41 @@ namespace App\Utils;
 
 class App
 {
-    // $app - временый контейнер (шаблом проэктирование риестор)
-    public static $app;
+    // $app - temporary container
+    public static object $app;
 
+    /**
+     * @throws \Exception
+     */
     public function __construct()
     {
-
-        // Стартуем сесию
+        // Starting the session
         session_start();
 
-        // Создаем класс с нашими эксепшонами, что бы они подключились
+        // We create a class with our exceptions so that they connect
         new ErrorHandler();
 
-        // Подключаем наш реестр (в нем мы можем хранить все наши параметры)
+        // We connect our registry (we can store all our parameters in it)
         self::$app = Registry::instance();
-        // Вызываем getParams что бы заолнить контейнер Registry::instance данными
+        // Call getParams to populate the Registry::instance container with data
         $this->getParams();
 
-        // Подключаем наш роутер (маршрутизатор)
+        // We connect our router
         $router = new Router();
-        // Запускаем метод
+        // Run the method
         $router->process();
     }
 
-    // Получение параметров из папки config.
+    // Getting settings from the config folder.
     protected function getParams(): void
     {
-        // В переменную помешаем то что содержится params.php. Где обрашаемся константа CONF (путь к папке)
+        // Let's put in the variable what is contained in params.php. Where we refer to the CONF constant (folder path)
         $params = require_once CONF . '/params.php';
-        // Если этот масив не пуст, то пройдемся по нем и возмем отдельно ключ и занчение
-
-        if(!empty($params))
-        {
-            foreach($params as $k => $v)
-            {
-                // Тут мы обрашаемся к класу Registry метод setProperty и влаживаем туда ключ и занчение
-                self::$app->setProperty($k,$v);
+        // If this array is not empty, then we will go through it and take the key and value separately
+        if (!empty($params)) {
+            foreach ($params as $k => $v) {
+                // Here we refer to the Registry class setProperty method and put the key and value there
+                self::$app->setProperty($k, $v);
             }
         }
     }

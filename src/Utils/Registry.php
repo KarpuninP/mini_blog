@@ -4,29 +4,29 @@ namespace App\Utils;
 
 class Registry
 {
-    // Реализации патерна синглтон подключаем трэил
+    // Implementations of the singleton pattern connect trail
     use TSingletone;
 
-    // сюда мы будем класть все наши свойства
-    protected static $properties = [];
+    // here we will put all our properties
+    protected static array $properties = [];
 
-    // Тут мы создаем ключ и значение.
+    // Here we create a key and a value.
     public function setProperty(string $name, string|array $value): void
     {
         self::$properties[$name] = $value;
     }
 
-    // если оно существует, тогда мы его вернем, если нет, то вернем null
+    // If it exists then we will return it, if not then we will return null
     public function getProperty(string $name): array|null
     {
-        if(isset(self::$properties[$name])) {
+        if (isset(self::$properties[$name])) {
             return self::$properties[$name];
         }
         return null;
     }
 
-    // Будит распечатывать все доступные свойства (для дебага или посмотреть что там есть)
-    public function  getProperties(): array
+    // Will print all available properties (for debugging or to see what's there)
+    public function getProperties(): array
     {
         return self::$properties;
     }

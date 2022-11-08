@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Ошибка</title>
-</head>
-<body>
-<!-- На эту страницу будет перенаправлено если случится ошибка в режими разработки. И покажет где имено ошибка -->
-<h1>Произошла ошибка</h1>
-<p><b>Код ошибки:</b> <?= $errno ?></p>
-<p><b>Текст ошибки:</b> <?= $errstr ?></p>
-<p><b>Файл, в котором произошла ошибка:</b> <?= $errfile ?></p>
-<p><b>Строка, в которой произошла ошибка:</b> <?= $errline ?></p>
+    <head>
+        <meta charset="UTF-8">
+        <title>Error</title>
+    </head>
+    <body>
+        <!-- This page will be redirected to if an error occurs in development mode. And it will show where the error is -->
+        <h1>An error has occurred</h1>
+        <p><b>Error code:</b> <?= $errno ?></p>
+        <p><b>Error text:</b> <?= $errstr ?></p>
+        <p><b>The file where the error occurred:</b> <?= $errfile ?></p>
+        <p><b>The line where the error occurred:</b> <?= $errline ?></p>
 
-</body>
+    </body>
 </html>

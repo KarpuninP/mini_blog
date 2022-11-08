@@ -1,25 +1,26 @@
 <?php
 
-// тут будем писать какие то функци которые будут вне класов и их можно будет в любом момент дергать.
-// функция для дебага (типа var_dump();)
-function debug($arr)
-{
+// Debug function (like var_dump();)
+use JetBrains\PhpStorm\NoReturn;
+
+function debug($arr) {
     echo '<pre>' . print_r($arr, true) . '</pre>';
 }
 
-// Функция перенаправление
-function redirect($http = false)
-{
+// redirect function
+#[NoReturn]
+function redirect($http = false) {
     if($http) {
-        // если у нас есть какойто адрес то сделаем редирект на него
+        // if we have some address, then we will redirect to it
         $redirect = $http;
     }else {
-        // если нечего не передали то надо обновить страницу f5 туда откуда он пришол
-        // если в масиве сервер (адрес который он пришол) если нет то на главную страницу
-        $redirect = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : PATH;
+        // if nothing is passed, then you need to update page f5 to where it came from
+        // if the server is in the array (the address it came from), if not, then go to the main page
+        $redirect = $_SERVER['HTTP_REFERER'] ?? PATH;
     }
-    // И отправят нас на страницу которая получилось выше
+    // And send us to the page that turned out above
     header("Location: $redirect");
     exit;
 }
+
 

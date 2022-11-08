@@ -2,56 +2,59 @@
 
 namespace App\Utils;
 
+use JetBrains\PhpStorm\NoReturn;
+
 class ErrorHandler
 {
-    // В файле config->init.php мы создали константу debag и тут мы ее будем использовать
-    // Дальше все эти исключение мы будем ловить
+    // In the config->init.php file, we created the debag constant and we will use it here
+    // Then we will catch all these exceptions
     public function __construct()
     {
-        // Отображение ошибок
-        // Если константа дебак 1 (true) то мы используем вывод ошибок. А если ноль (fulls) то нет
-        if(DEBUG){
+        // Error display
+        // If debug constant is 1 (true) then we use error output. And if zero (fulls) then no
+        if (DEBUG) {
             ini_set('display_errors', 1);
             ini_set('display_startup_errors', 1);
             error_reporting(-1);
-        }else{
+        } else {
             error_reporting(0);
         }
 
-        // Далее мы их кидаем в эту анонимную функцию функуцию
+        // Next, we throw them into this anonymous function
         set_exception_handler([$this, 'exceptionHandler']);
     }
 
-    // В этой функции ловим ошибки и соеденяем 2 функции которые записаны ниже, тут мы просто помешаем то что надо в функции
+    // In this function, we catch errors and connect the 2 functions that are written below, here we just interfere with what is needed in the function
     public function exceptionHandler(object $e): void
     {
         $this->logErrors($e->getMessage(), $e->getFile(), $e->getLine());
         $this->displayError('Исключение', $e->getMessage(), $e->getFile(), $e->getLine(), $e->getCode());
     }
 
-    // логирование ошибок
+    // Error logging
     protected function logErrors(string $message = '', string $file = '', string $line = ''): void
     {
-        // Записываем ошибку (дата/год/время) потом текст ошибки дальше указываем в каком файле ошибка и какая строка потом сброс на новую строку,
-        // Троечка означает что мы записываем его в фаил и казываем путь файла.
-        error_log("[" . date('Y-m-d H:i:s') . "] Текст ошибки: {$message} | Файл: {$file} | Строка: {$line}\n=================\n", 3, ROOT . '/tmp/errors.log');
+        // We write down the error (date / year / time), then the text of the error, then we indicate in which file the error is and which line, then reset to a new line,
+        // C grade means that we write it to a file and say the path of the file.
+        error_log("[" . date('Y-m-d H:i:s') . "] Error text: {$message} | File: {$file} | Line: {$line}\n=================\n", 3, ROOT . '/tmp/errors.log');
     }
 
-    // вывод ошибок(показ ошибок), подключение шаблома ошибок.
-    // Тут мы создадим папочку public->errors и в ней 3 файла 404.php / dev.php / prod.php
+    // Error output (error display), error template connection.
+    // Here we will create a public->errors folder and it will contain 3 files 404.php / dev.php / prod.php
+    #[NoReturn]
     protected function displayError(string $errno, string $errstr, string $errfile, int $errline, int $responce = 404): void
     {
-        //если $responce будет 404 и константа дебаг фолс (=0) то тогда выводим страницу с 404 ошибкой
-        // Это значит что пользователям ненужно видеть что за ошибка вышла (кагда уже на продакшане)
+        // If $response is 404 and constant debug falls (=0) then display page with 404 error
+        // This means that users do not need to see what the error is (when already in production)
         http_response_code($responce);
-        if($responce == 404 && !DEBUG) {
+        if ($responce == 404 && !DEBUG) {
             require VIEW . '/errors/404.template.php';
             die;
         }
-        // Если деиаг равен 1 (тру) то мы подключаем dev.php иначе prod.php и дальше вырубает
-        if(DEBUG) {
+        // If the debug is 1 (true), then we connect dev.php otherwise prod.php and then cuts down
+        if (DEBUG) {
             require VIEW . '/errors/dev.template.php';
-        }else{
+        } else {
             require VIEW . '/errors/prod.template.php';
         }
         die;

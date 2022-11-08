@@ -2,35 +2,38 @@
 
 namespace App\Utils;
 
+use RedBeanPHP\RedException;
+
 class Db
 {
-// будем реулизовываьт патерн синглтон
+// We will implement the singleton pattern
     use TSingletone;
 
+    /**
+     * @throws RedException
+     * @throws \Exception
+     */
     protected function __construct()
     {
-        // Конфигурационные файлы нашей бд засовываем в переменую для подключение
+        // We put the configuration files of our database into a connection variable
         $db = require_once CONF . '/config_db.php';
         // var_dump($db );
-        // подключаем RedBeanPHP
+        // Connect RedBeanPHP
         class_alias('\RedBeanPHP\R', '\R');
         \R::setup($db['dsn'], $db['user'], $db['pass']);
-        // проверяем если установленое соединение, если нет то выкидываем исключение.
-        //  Благодоря данной библеотеке мы можем проверить
+        // We check if the connection is established, if not, we throw an exception.
+        // Thanks to this library, we can check
         if (!\R::testConnection()) {
-            throw new \Exception("Нет соединения с БД", 500);
-        }else{
-            // запись в логе
-            error_log("[" . date('Y-m-d H:i:s') . "] Текст ошибки: Соединение установлено с БД \n=================\n", 3, ROOT . '/tmp/errors.log');
+            throw new \Exception("No connection to database", 500);
         }
-        // Больше функций RedBeanPHP в продакшене нам ненужны (например менять таблицу на ходу) и когда проэкт в продакшене
-        // их надо заморозить для этого будем использовать функцию этой библеотеке \R::freeze(true)
+        // We do not need more RedBeanPHP functions in production (for example, change the table on the go) and when the project is in production
+        // they need to be frozen for this we will use the function of this library \R::freeze(true)
         // https://redbeanphp.com/index.php?p=/fluid_and_frozen
-        // если у нас freeze будет true, значит многие функции redbeanphp будут отключены
+        // If our freeze is true, then many redbeanphp functions will be disabled
         \R::freeze(!DEBUG);
         if (DEBUG) {
-            // это дебак режим красивый если DEBUG = DEBUG (режим разработки) значит мы увидем запрос таблици
-            \R::debug( TRUE, 1 );
+            // This debug mode is beautiful if DEBUG = DEBUG (development mode) then we will see the query table
+            \R::debug(TRUE, 1);
         }
     }
 }

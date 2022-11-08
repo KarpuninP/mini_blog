@@ -9,39 +9,36 @@ class TypeController extends Controller
 {
     public function  __construct()
     {
-        // если нужено в конструкторе что то добавить пишем это
         parent::__construct();
-        // Подключаем название модельки
         $this->nameModal = new Blog();
     }
 
     /**
      * @throws \Exception
      */
-    // Берем данные из бд с мадоннами таблицами и запускаем нашу модельку
+    // We take data from the database with Madonna tables and run our model
     public function dbData(string $themes, int $index = 1): array
     {
-        // Объект модельки перекидываем в переменную
+        // We throw the model object into a variable
         $theoryData = $this->nameModal;
-        // Засовываем в массив с параметрами страниц
+        // Throw it into an array with page parameters
         $data['page'] = $theoryData->tag($themes);
-        // Засовываем в массив, то что нам надо выдать данные из бд
+        // We put it in an array, then we need to issue data from the database
         $data['textDb'] = $theoryData->load($themes, $index);
-        // Проверяем то что получилось
+        $data['nameTable'] = $themes;
 //        var_dump($data);
-        // Возвращаем массив данных
         return $data;
     }
 
     /**
      * @throws \Exception
      */
-    // Проверка Гет параметра
+    // Get parameter check
     public function getReqParam(string $themes): int
     {
-        // То что получили в Гет параметрах
-        // Если у нас не пуста, подставляем то что пришло гет параметром, иначе
-        // Прейдет первая цифра в массиве заданной таблице
+        // What we received in Get parameters
+        // If ours is not empty, we substitute what came with the get parameter, otherwise
+        // Pass the first digit in the array to the given table
        return !empty($_GET['p']) ? $_GET['p'] : current($this->nameModal->tag($themes));
     }
 }

@@ -2,41 +2,37 @@
 
 namespace App\Controller;
 
-
-
 class HomeController extends TypeController
 {
-
-    // Главная страница (тема)
+    /**
+     * @throws \Exception
+     */
     public function index()
     {
-        // Проверка гет параметра
+//        var_dump(isset($_SESSION['isLogin']));
+        // Get parameter check
         $index = $this->getReqParam('theory');
-        // Проверяем то что получилось
 //       var_dump($index);
 
-        // Засовываем название вкладки и описание
         $data = [
-            'namePage' => 'Теоретический раздел',
-            'descriptionPage' => 'Выводится теория, тех или иных технологий',
+            'namePage' => 'Theoretical section',
+            'descriptionPage' => 'A theory of certain technologies is being developed',
         ];
 
-        // В массив $data мы добавляем в конец то что пришло от метода dbData
-        // В методе dbData приходит массив с данными для отображения на сайте и массив с нумерацией страниц
-        // Используем функция array_merge для слияния массива
+        // We add to the end of the $data array what came from the dbData method
+        // In the dbData method, an array with data for displaying on the site and an array with pagination comes
+        // Use the array_merge function to merge an array
         $data = array_merge($data, $this->dbData('theory', $index));
 
-        // Проверяем все ли впоредке
 //        debug($data);
 
-      // обязаловка для возврата странице
-      // мета данные
+      // metadata
       $this-> setMeta (
-          'Главная страница',
-          'тут содержится данные про сдачу собеседование',
-          'Собеседование на php, ответы на собеседование'
+          'Main page',
+          'Here is the information about the interview',
+          'php interview interview answers'
       );
-      // возвращает к подключению шаблон и передача данных
+      // Returns the template to the connection and data transfer
       $this-> view('main.main', $data);
     }
 }

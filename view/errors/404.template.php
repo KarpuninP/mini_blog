@@ -54,9 +54,8 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 <body>
 <div class="wrap">
     <div class="logo">
-        <!-- где хранится картинка -->
         <img src="/pic/404.png" alt=""  />
-        <!--сылка на главную страницу с помошю константы <?=PATH;?> -->
+        <!--link to the main page using a constant <?=PATH;?> -->
         <p><a href="<?=PATH;?>">Go back to Home</a></p>
     </div>
 </div>

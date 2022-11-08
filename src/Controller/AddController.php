@@ -4,167 +4,151 @@ namespace App\Controller;
 
 use App\Model\Blog;
 use App\Utils\Base\Controller;
+use Exception;
+use JetBrains\PhpStorm\ArrayShape;
+use RedBeanPHP\RedException\SQL;
 
 class AddController extends Controller
 {
     public function  __construct()
     {
-        // при добавлении в конструктор его подключаем, то что было в родительском классе
         parent::__construct();
-        // Создаем Модельку и добавляем его в свойства
         $this->nameModal = new Blog();
     }
 
-
-
     /**
-     * @throws \RedBeanPHP\RedException\SQL
+     * @throws SQL
      */
-    // Главная страница
     public function index(): void
     {
-        // Проверяем каким методом пришёл запрос
+        // Checking by which method the request came
         //var_dump($_SERVER['REQUEST_METHOD']);
         $data = [];
         if ($_SERVER['REQUEST_METHOD'] == 'GET') {
             $data = [
-                'namePage' => 'Добавить текст в блог',
-                'descriptionPage' => 'Тут можно добавить текст в блог. С заданной тематикой и разделом'
+                'namePage' => 'Add text to blog',
+                'descriptionPage' => 'Here you can add text to the blog. With a given theme and section',
+                'themesList' => $this->themesList()
             ];
+
         }else {
-            // Запускаем метод start(), он возвращает id поста
+            // Run the start() method, it returns the post id
             $idPost = $this->start();
 
-            // Создаем сообщение для descriptionPage сообщение отправлено в бд да или нет
             $false = [
-                'namePage' => 'Сообщение !!!',
-                'descriptionPage' => 'Поздравляю ваше текст был отправлен в базу данных. Все прошло успешно!',
+                'namePage' => 'Information !!!',
+                'descriptionPage' => 'Congratulations your text has been submitted to the database. Everything went well!',
                 'error' => false
             ];
 
             $true = [
-                'namePage' => 'Сообщение !!!',
-                'descriptionPage' => 'К сожалению ваше сообщение не было записано в базу данных.',
+                'namePage' => 'Information !!!',
+                'descriptionPage' => 'Sorry, your message has not been saved to the database.',
                 'error' => true
             ];
 
-            // Проверяем если пришло число и неравно 0 значит сообщение отправлено
+            // Check if a number has arrived and is equal to 0, then the message has been sent
             $data= (is_numeric($idPost) && $idPost != 0)  ? $false : $true;
-            // Если выйдет ошибка запишем ее в лог
             if($data['error']) {
-                error_log("[" . date('Y-m-d H:i:s') . "] Текст ошибки: По какой то причине, недобавлнена запись в бд | Файл: src/Controller/AddController.php, метод index  \n=================\n", 3, ROOT . '/tmp/errors.log');
+                error_log("[" . date('Y-m-d H:i:s') . "] Error text: For some reason, the record was not added to the database | Файл: src/Controller/AddController.php, method index  \n=================\n", 3, ROOT . '/tmp/errors.log');
             }
         }
+        $data['link'] = 'add';
+//      var_dump($data);
 
-        // смотрим что у нас в дате файле
-        var_dump($data);
-        // обязаловка для возврата странице
-        // мета данные
+        // Metadata
         $this-> setMeta (
-            'Главная страница',
-            'тут содержится данные про сдачу собеседование',
-            'Собеседование на php, ответы на собеседование'
+            'Main page',
+            'here is the information about the interview',
+            'php interview interview answers'
         );
-        // возвращает к подключению шаблон и передача данных
+        // Returns the template to the connection and data transfer
         $this-> view('add.add', $data);
     }
 
-
-
     /**
-     * @throws \RedBeanPHP\RedException\SQL
-     * @throws \Exception
+     * @throws SQL
+     * @throws Exception
      */
-    // Начало, просмотреть по поводу переадресации на другой метод и вывод модального окна, что все загружено
+    // Start
     public function start(): int|string
     {
-
         //var_dump($_POST);
+//        If the add button is pressed
         if (isset($_POST['send'])) {
-            // Задаем переменные и проверяем пришло ли если нет то задаем пустую строку (тернарные операторы)
-            $type = isset($_POST['type']) ? $_POST['type'] : '';
-            $themes = isset($_POST['themes']) ? $_POST['themes'] : '';
-            $postId = isset($_POST['postId']) ? $_POST['postId'] : '';
-            $index = isset($_POST['index']) ? $_POST['index'] : '';
-            $comment = isset($_POST['comment']) ? $_POST['comment'] : '';
-
-            // Запускаем метод обновить или добавить
-           $data = $this->add($type, $themes, $postId, $index, $comment);
-
-        }elseif (isset($_POST['dell'])) {
-            // Задаем переменные и проверяем пришло ли если нет то задаем пустую строку (тернарные операторы)
-            $postId = isset($_POST['postId']) ? $_POST['postId'] : '';
-            $type = isset($_POST['type']) ? $_POST['type'] : '';
-
-            $this->dell($type, $postId);
-            $data = 0;
-        }else {
-           throw new \Exception("It came in other ways (hacking)", 500);
+            // Run the update or add method
+            $data = $this->add($_POST);
+//      If the edit button is pressed
+        } elseif (isset($_POST['edit'])) {
+//            var_dump($_POST);
+            $data = $this->edit($_POST);
+//          If the delete button is clicked
+        } elseif (isset($_POST['dell'])) {
+//            var_dump($_POST);
+            $data = $this->dell($_POST);
+        } else {
+            throw new Exception("It came in other ways (hacking)", 500);
         }
         return $data ;
     }
 
     /**
-     * @throws \RedBeanPHP\RedException\SQL
-     * @throws \Exception
+     * @throws SQL
+     * @throws Exception
      */
-    // Создает или обновляет таблицу
-    public function add(string $type, string $themes, int $postId, string $index, string $comment): int|string
+    // Creates a post
+    public function add(array $post): int|string
     {
-        // Проверяем что пришло
-        // var_dump($type, $themes, $postId, $index, $comment);
-       $data = $this->validation($type, $themes, $postId, $index, $comment);
-       //var_dump($data);
+        // var_dump($post);
+        $data = $this->validation($post);
+        //var_dump($data);
 
-        // Если в $postId что то есть значит запустим метод обновить, если нет то создать (дописать)
-
-      // Запускаем в модель Blog() метод create и передаем туда проваледированые данные
-      $tableId = $this->nameModal->create($data['type'], $data['themes'], $data['index'], $data['comment']);
-      //var_dump($tableId);
-      return $tableId;
+        // We run the create method in the Blog () model and pass the validated data there
+        return $this->nameModal->create($data['type'], $data['themes'], $data['index'], $data['comment']);
     }
 
-
-
     /**
-     * @throws \Exception
+     * @throws Exception
      */
-    // Валидация пришедших данных
-    public function validation(string $type, string $themes, int $postId, string $index, string $comment): array
+    // Validation of incoming data
+    #[ArrayShape(['type' => "mixed|string", 'themes' => "mixed", 'postId' => "int|null|string", 'index' => "mixed", 'comment' => "mixed"])]
+    public function validation(array $post): array
     {
+        // If not, then substitute an empty string
+        $type = $post['type'] ?? '';
+        $themes = $post['themes'] ?? '';
+        $postId = $post['postId'] ?? '';
+        $index = $post['index'] ?? 'index';
+        $comment = $post['comment'] ?? 'text';
 
-        // Проверка переменой $type
-        if (!$type || $type != 'theory' &&  $type != 'practice') {
-            // Выкидываем ошибку
-            throw new \Exception("Ошибка, несоответствует $type заданным параметрам.", 500);
+        // Variable check $type
+        if ($type != 'theory' && $type != 'practice') {
+            throw new Exception("Error, the type does not match the given parameters.File AddController.php", 500);
         }
 
-        // Проверка переменой $themes
+        // Variable check $themes
         $lendThemes = strlen($themes);
-        if (!$lendThemes || $lendThemes < 0 || $lendThemes > 50) {
-            // Выкидываем ошибку
-            throw new \Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
+        if (!$lendThemes || $lendThemes <= 0 || $lendThemes > 50) {
+            throw new Exception("Error, the themes does not match the given parameters.File AddController.php", 500);
         }
 
         if (!is_numeric($postId) && $postId !== '') {
-            // Выкидываем ошибку
-            throw new \Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
+            throw new Exception("Error, the id does not match the given parameters.File AddController.php", 500);
         }
 
-        // Проверка переменой $index
+        // Variable check $index
         $lendIndex = strlen($index);
-        if (!$lendIndex || $lendIndex < 0 || $lendIndex > 250) {
-            // Выкидываем ошибку
-            throw new \Exception("Ошибка, несоответствует оглавление заданным параметрам.", 500);
+        if (!$lendIndex || $lendIndex <= 0 || $lendIndex > 250) {
+            throw new Exception("Error, the index does not match the given parameters.File AddController.php", 500);
         }
 
-        // Проверка переменой $index
+        // Variable check $comment
         $lendComment = strlen($comment);
         if (!$lendComment || $lendComment < 0 || $lendComment > 50000) {
-            throw new \Exception("Ошибка, несоответствует текст заданным параметрам.Файл add_backend.php", 500);
+            throw new Exception("Error, the text does not match the given parameters.File AddController.php", 500);
         }
 
-        // Убираем возможность подставить вредоносный код (кодируем/экранируем спец. символы)
+        // We remove the ability to insert malicious code (encode / escape special characters)
         $themes = filter_var($themes, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
         $index = filter_var($index, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
         $comment = filter_var($comment, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
@@ -179,9 +163,32 @@ class AddController extends Controller
 
     }
 
-    public function dell(string $type, int $postId)
+//  Get an array of tags
+    public function themesList(): ?array
     {
-       echo 'удалино ' . $postId;
+        return $this->nameModal->taglist();
+    }
 
+    /**
+     * @throws Exception
+     */
+//    Edit post
+    public function edit(array $post): int
+    {
+        $data = $this->validation($post);
+//        var_dump($data);
+        return $this->nameModal->edit($data['postId'], $data['type'], $data['index'], $data['comment']);
+    }
+
+    /**
+     * @throws Exception
+     */
+    // Delete post
+    public function dell(array $post): int
+    {
+//        var_dump($post);
+        $data = $this->validation($post);
+        // Start the removal
+        return $this->nameModal->remove($data['postId'], $data['type'], $data['themes']);
     }
 }

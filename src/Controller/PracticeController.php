@@ -2,40 +2,35 @@
 
 namespace App\Controller;
 
-
-
 class PracticeController extends TypeController
 {
-    // Главная страница (тема)
+    /**
+     * @throws \Exception
+     */
     public function index()
     {
-        // Проверка гет параметра
+        // Get parameter check
         $index = $this->getReqParam('practice');
-        // Проверяем то что получилось
 //        var_dump($index);
 
-        // Засовываем название вкладки и описание
         $data = [
-            'namePage' => 'Практический раздел',
-            'descriptionPage' => 'Выводится практическая запись, тех или иных технологий',
+            'namePage' => 'Practical section',
+            'descriptionPage' => 'A practical record of certain technologies is displayed',
         ];
 
-        // В массив $data мы добовляем в конец то что пришло от метода dbData
-        // В методе dbData приходит массив с данными для отображение для сайта и массив с нумерацией страниц
+        // We add to the end of the $data array what came from the dbData method
+        // In the dbData method comes an array with data to display for the site and an array with pagination
         $data = array_merge($data, $this->dbData('practice', $index));
 
-        // Проверяем все ли в порядке
-//        debug($data);
+//       debug($data);
 
-        // обязаловка для возврата странице
-        // мета данные
+        // Metadata
         $this-> setMeta (
-            'Главная страница',
-            'тут содержится данные про сдачу собеседование',
-            'Собеседование на php, практическая часть'
+            'Main page',
+            'Here is the information about the interview',
+            'Interview in php, practical part'
         );
-        // возвращает к подключению шаблон и передача данных
+        // Returns the template to the connection and data transfer
         $this-> view('main.main', $data);
     }
-
 }

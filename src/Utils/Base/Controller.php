@@ -7,39 +7,49 @@ use App\Utils\App;
 abstract class Controller
 {
 
-    // название папки шаблон
-    public $template = '';
-    // название самого шаблона
-    public $layout = '';
-    // Тут будет хранится данные
-    public $data = [];
-    // Тут будут мета даный хранится тайтл, дескрипшон
-    public $meta = ['title' => '', 'desc' => '', 'keywords' => ''];
-    // Объект модели (бд)
-    public $nameModal;
+    // Folder name template
+    public string $template = '';
+    // Folder name layout
+    public string $layout = '';
+    // Data will be stored here
+    public array $data = [];
+    public array $onlyData = [];
+    // There will be metadata
+    public array $meta = ['title' => '', 'desc' => '', 'keywords' => ''];
+    // Model object (bd)
+    public object $nameModal;
 
 
     public function __construct()
     {
-        // добовляем в дату параметры, что бы можно их было получить
+        // Add parameters to the date so that you can get them
         $data['params']=App::$app->getProperties();
-        // засовывваем все в свойства
+        // put everything in properties
         $this->data = $data;
 
-        // меняем тему сайта (типа темная и т.д.) потом что то доделать отдельный клас это в качестве примера
+        // change the theme of the site (such as dark, etc.) then finish something with a separate class as an example
         //$this->layout = 'dark_blog';
     }
 
-    // Для отрендование странички. Получаем параметры от базового контролера и перекидываем это class View
+    /**
+     * @throws \Exception
+     */
+    // For page rendering. Get parameters from the base controller and throw this class View
     public function getView(): void
     {
-        //создаем обьект класса View и передаем туда параметры этого класса
+        // Create an object of the View class and pass the parameters of this class there
         $viewObject = new View($this->layout, $this->template, $this->meta);
-        // Далее запускаем метод, для того что бы отрендовать страничку
-        $viewObject->show($this->data);
+        // If there is a request sent via ajax server, then we do this
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            // It is currently not in use
+            $viewObject->getJsAjax($this->onlyData);
+        } else {
+            //  If not, then run the method to rent the page
+            $viewObject->show($this->data);
+        }
     }
 
-    // формировать мето данные
+    // Generate metadata
     public function setMeta($title = '', $desc = '', $keywords = ''): void
     {
         $this->meta['title'] = $title;
@@ -47,15 +57,13 @@ abstract class Controller
         $this->meta['keywords'] = $keywords;
     }
 
-    // работа с датой
+    // Work with date
     public function view(string $template, array $data = []): void
     {
-        // передаем название папки
+        // Pass folder name
         $this->template = $template;
-        // засовываем все в свойства
+        // Put everything in properties
         $this->data['siteData'] = $data;
     }
 
-    // этот метод нужен для кастыля что бы незабивать лог.... баг  который немогу понять почему он появляется
-    public function js (): void{ }
 }

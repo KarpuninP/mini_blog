@@ -6,17 +6,15 @@ use App\Utils\Base\Controller;
 
 class ModalController extends Controller
 {
-    public function index()
+//    Connecting a registration template
+    public function signUp()
     {
-       //var_dump($_GET['id']);
-        //var_dump(isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest');
-//        $data = [$_GET];
-        require VIEW . '/modal.php';
-      // echo 'hi';
-//        redirect('http://localhost/');
+        require_once VIEW . '/login/sign_up.template.php';
+    }
 
-        //echo 'ok';
-        //redirect();
-//res - это ответ
+//    Connecting a login template
+    public function signIn()
+    {
+        require_once VIEW . '/login/sign_in.template.php';
     }
 }

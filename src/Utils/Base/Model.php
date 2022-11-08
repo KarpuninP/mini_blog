@@ -6,11 +6,8 @@ use App\Utils\Db;
 
 abstract class Model {
 
-
     public function __construct() {
-        // Подключаем фаил DB
+        // Connecting the DB file
         Db::instance();
     }
-
-
 }

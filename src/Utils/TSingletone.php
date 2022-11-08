@@ -4,13 +4,13 @@ namespace App\Utils;
 
 trait TSingletone
 {
-    // создаем свойства приватное, это свойства заполняем объектом класса
+    // We create private properties, we fill these properties with a class object
     public static $instance;
 
     public static function instance (): object
     {
-        // Если у нас свойства instance пусто, то тогда мы в него положим объект нового класса.
-        // Если он не пустой, то тогда мы его возвращаем. Вернем этот самый объект
+        // If our instance properties are empty, then we will put an object of a new class in it.
+        // If it's not empty, then we return it. Let's return this very object
         if(self::$instance === null)
         {
             self::$instance = new self;
