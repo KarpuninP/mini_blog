@@ -1,0 +1,1913 @@
+|-------------------------------------------------------------------------------------------------|
+|..........................╭╮╭╮╭╮╱╱╱╱╱╱╭┳━━━╮╱╱╱╱╱╱╱╱╱╱╱╭╮........................................|
+|..........................┃┃┃┃┃┃╱╱╱╱╱╱┃┃╭━╮┃╱╱╱╱╱╱╱╱╱╱╱┃┃........................................|
+|..........................┃┃┃┃┃┣━━┳━┳━╯┃╰━╯┣━┳━━┳━━┳━━╮┃┃╱╱╭━━┳━━┳━━┳━━┳━╮.......................|
+|..........................┃╰╯╰╯┃╭╮┃╭┫╭╮┃╭━━┫╭┫┃━┫━━┫━━┫┃┃╱╭┫┃━┫━━┫━━┫╭╮┃╭╮╮......................|
+|..........................╰╮╭╮╭┫╰╯┃┃┃╰╯┃┃╱╱┃┃┃┃━╋━━┣━━┃┃╰━╯┃┃━╋━━┣━━┃╰╯┃┃┃┃......................|
+|..........................╱╰╯╰╯╰━━┻╯╰━━┻╯╱╱╰╯╰━━┻━━┻━━╯╰━━━┻━━┻━━┻━━┻━━┻╯╰╯......................|
+|-------------------------------------------------------------------------------------------------|
+
+---------------------------------------- Содержание ----------------------------------------------
+1) Установка WordPress
+1.1) Установка через docker-compose на основе LEMP + phpmyadmin
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+----------------------------------------- Основа -----------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1) Установка WordPress
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ставим его через docker-compose на основе LEMP + phpmyadmin, затем устанавливае WordPress через compose
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.1) Установка через docker-compose на основе LEMP + phpmyadmin
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Сначало ставим LEMP + phpmyadmin через docker-compose
+- Создаем docker-compose.yml
+----------------------------- Содержимое файла ------------------------------------
+version: '3.7'
+services:
+  nginx:
+    build:
+      context: ./docker/nginx
+    volumes:
+      - ./:/var/www/wp
+    ports:
+      - "80:80"
+  php-fpm:
+    build:
+      context: ./docker/php-fpm
+    volumes:
+      - ./:/var/www/wp
+    environment:
+      PHP_IDE_CONFIG: serverName=${SERVER_NAME}
+    env_file:
+      - .env
+    networks:
+      default:
+        ipv4_address: ${PHP_FPM_IP}
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - ./mysql_data_wp:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      default:
+        ipv4_address: ${MYSQL_IP}
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+    restart: always
+    ports:
+      - 8081:80
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET}
+volumes:
+  mysql_data_wp:
+-----------------------------------------------------------------------------------
+все остальное стандарт....
+- В папке docker 2 папки nginx и php-fpm
+- В папке создаем docker->nginx->conf.d->default.conf
+
+----------------------------- Содержимое файла ------------------------------------
+server {
+    listen 80;
+    index index.php;
+    server_name 127.0.0.1 localhost;
+    root /var/www/wp/wordpress;
+
+    location / {
+        try_files $uri /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass php-fpm:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+    }
+    error_log /var/log/nginx/project_error.log;
+    access_log /var/log/nginx/project_access.log;
+}
+
+-----------------------------------------------------------------------------------
+
+- В папке создаем docker->nginx->Dockerfile
+
+----------------------------- Содержимое файла ------------------------------------
+FROM nginx:1.22-alpine
+
+COPY ./conf.d /etc/nginx/conf.d
+
+WORKDIR /var/www/wp
+
+-----------------------------------------------------------------------------------
+
+- В папке создаем docker->php-fpm->Dockerfile
+
+----------------------------- Содержимое файла ------------------------------------
+FROM php:7.4-fpm-alpine
+
+RUN apk update \
+    && apk upgrade \
+    && apk add unzip autoconf g++ make mysql-dev libzip-dev libxml2-dev libjpeg-turbo-dev libpng-dev libwebp-dev  imap-dev unixodbc unixodbc-dev ldb-dev libldap openldap-dev gettext-dev oniguruma-dev freetype-dev krb5-pkinit krb5-dev krb5 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-install mysqli pdo_mysql zip xmlrpc dba gd imap  sockets soap  ldap gettext exif  mbstring \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
+    && docker-php-ext-configure mysqli --with-mysqli=mysqlnd
+
+
+RUN mv $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
+
+COPY www.conf /usr/local/etc/php-fpm.d/
+
+USER 1000:1000
+
+WORKDIR /var/www/wp
+
+-----------------------------------------------------------------------------------
+
+- В папке создаем docker->php-fpm->www.conf
+
+----------------------------- Содержимое файла ------------------------------------
+[www]
+user = www-data
+group = www-data
+clear_env = no
+listen = 9000
+pm = dynamic
+pm.max_children = 5
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+
+-----------------------------------------------------------------------------------
+
+- Создаем .env
+
+----------------------------- Содержимое файла ------------------------------------
+# Настройки MySQL для входа
+DB_ROOT_PASSWORD=test
+DB_USER=wpuser
+DB_PASSWORD=test
+DB_NAME=wordpress
+
+# нетворк между контенерами
+NETWORK_SUBNET=172.25.0.0/24
+PHP_FPM_IP=172.25.0.3
+MYSQL_IP=172.25.0.6
+
+SERVER_NAME=www
+
+-----------------------------------------------------------------------------------
+- Стейк создан, теперь запускаем и проверяем  docker-compose up --build
+- Открываем браузер заходим http://localhost/   тут будет вордпрес (читый экран, так как мы его еше не устанавливали)
+- Открываем браузер заходим http://localhost:8081/ тут будет phpmyadmin
+-----phpmyadmin --- подключение в .env
+server: 172.25.0.6  (ip где находится msql)
+login: root
+pass: test
+--------------------
+----------------------------------
+--- команды которые пригодятся ---
+Первый зумуск сформировать образы и запустить
+docker-compose up --build
+Для запуска
+docker-compose up
+для отключение
+docker-compose down
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.2) Установка wordpress через композер
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Далее ставим  wordpress
+Создаем файл composer.json и добовляем это стандартный стейк для установки и плагины, которые буду использовать.
+----------------------------- Содержимое файла ------------------------------------
+{
+  "require": {
+    "johnpbloch/wordpress": "^5.3",
+    "wpackagist-plugin/rus-to-lat-advanced": "^1.1",
+  },
+  "repositories":[
+    {
+      "type":"composer",
+      "url":"https://wpackagist.org"
+    }
+  ],
+  "extra": {
+    "installer-paths": {
+      "wordpress/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
+      "wordpress/wp-content/themes/{$name}/": ["type:wordpress-theme"]
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true,
+      "johnpbloch/wordpress-core-installer": true
+    }
+  }
+}
+-----------------------------------------------------------------------------------
+- Для первого раза мы это все должны установить
+composer install
+ - Все установлено проверяем, заходим в http://localhost/
+ - выбераем язык
+ - Указываем настройки бд
+-----wordpress bd --- подключение в .env
+bd_name: wordpress
+login: wpuser
+pass: test
+server: 172.25.0.6  (ip где находится msql)
+-----------------
+ - Далее инфа про сайт, Имя пользователя изменить НЕЛЬЗЯ !!! - поэтому спрашиваем у клиенат
+- Для теста -
+login: Admin
+pass: qwerty
+
+Все установка прошла успешной, дальше у нас настройки.
+-----------------------------------------
+2) Минимальные настройки
+-----------------------------------------
+Когда все запустили, заходим в настройки нашего сайта.
+---Заходим в Общие настройки---
+- Меняем название на php interview
+- Краткое описание на Help with interview to php
+---Заходим в Настройки постоянных ссылок---
+- Ставим структура сылок Произвольно
+/%category%/%postname%/
+
+-----------------------------------------
+3) Создание темы
+-----------------------------------------
+Описать что надо сделать при создание темы --- дополнить
+
+-----------------------------------------
+3.1) Создание темы: " Подготовка к создание темы нашего проэкта (создание шаблонов)"
+-----------------------------------------
+- Создаем папку с названием php_interview нашей темы по адресу wordpress->wp-content->themes->php_interview
+  Это будет наша тема проэкта, тут будет хранится все.
+- Перемешаем нашу верстку и все что с ней связана в нутрь этой папке, указываем название assets тубу будет хранится верстка со скрипами
+- Создаем style.css для активации темы WP и в нем пишем это главные стили
+----------------------------- Содержимое файла ------------------------------------
+/*
+* Theme Name: PHP-interview
+* Author: Pavlo Karpunin
+* Author URL: https://www.linkedin.com/in/pasha-karpunin-php-developer/
+* Description: Help with interview to php
+* License: GNU General Public License v2 or later
+* License URI: http://www.gnu.org/licenses/gpl-2.0.html
+* Version:  v.1.0
+*/
+--------------------------------------------------------------------------------------
+- Создаем index.php для старта и вставляем туда для проверки работоспособности echo "Hello World";
+- 404.php
+- footer.php
+- header.php
+- function.php
+- page-about.php
+
+- Что бы была видна фотка нашей темы на главной странице выбр тем нужно перенести нашу фотографию там где все файлы и
+переменовать в screenshot
+- Актевируем и проверяем что тема появилась чистый экран
+-----------------------------------------
+3.2) Создание темы: " Вставляем нашу верстку в шаблон"
+-----------------------------------------
+- Копируем наш шаблон то что идет в header и идет в footer вставляем туда, все остальное index.
+- В index.php подключем header и footer
+----------------------------- Содержимое файла ------------------------------------
+<!-- подключаем хедер  -->
+<?php
+get_header();
+?>
+
+<!-- середина, она и будет менятся-->
+<main>
+    ...
+</main>
+
+<!-- подключаем футер  -->
+<?php
+
+    get_footer();
+?>
+--------------------------------------------------------------------------------------
+- А в header мы вставляем вместо подключение скриптов
+    <?php wp_head();?>
+- А в footer мы вставляем вместо подключение скриптов
+    <?php wp_footer(); ?>
+- В function.php подключаем js и css с помошью хука add_action('wp_enqueue_scripts', ...)
+
+----------------------------- Содержимое файла ------------------------------------
+// Подписываемся на хук для подключение js и css
+add_action('wp_enqueue_scripts', 'ph_scripts');
+
+
+// Функция для подключение js и css
+function ph_scripts() {
+    // функция которая подключает js. Название скрипта, Где находится он, Массив названий скриптов от которых зависит этот скрипт, Версия, Подключить скрипт в подвале.
+    // https://wp-kama.ru/function/wp_enqueue_script
+    wp_enqueue_script(
+        'bootstrap.bundle.min',
+        get_template_directory_uri() . '/assets/js/bootstrap.bundle.min.js',
+        [],
+        'v5.2.0',
+        true
+    );
+    wp_enqueue_script(
+        'jquery-1.11.0.min',
+        get_template_directory_uri() . '/assets/js/jquery-1.11.0.min.js',
+        [],
+        '1.11.0',
+        true
+    );
+    wp_enqueue_script(
+        'main',
+        get_template_directory_uri() . '/assets/js/main.js',
+        ['jquery-1.11.0.min'],
+        '1.0',
+        true
+    );
+
+    // Подключаем стили css. Задаем id, Где находится он, Массив идентификаторов других стилей от которых зависит подключаемый файл стилей, Версия, Атрибута media
+    // https://wp-kama.ru/function/wp_enqueue_style
+    wp_enqueue_style(
+        'bootstrap.min',
+        get_template_directory_uri() . '/assets/css/bootstrap.min.css',
+        [],
+        '1.0',
+        'all'
+    );
+    wp_enqueue_style(
+        'ph-style',
+        get_template_directory_uri() . '/assets/css/style.css',
+        [],
+        '1.0',
+        'all'
+    );
+    // добовление гуглский шрифт
+    wp_enqueue_style(
+        'google-fonts',
+        'https://fonts.googleapis.com/css2?family=Inter&display=swap',
+        [],
+        null,
+        'all'
+    );
+}
+
+--------------------------------------------------------------------------------------
+- Теперь подключаем мета атрибуты в header.php
+
+ <!-- подключение meta атрибуты к WP -->
+    <meta charset="<?php bloginfo('charset');  ?>">
+    <meta http-equiv='X-UA-Compatible' content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?= wp_get_document_title(); ?></title>
+
+- переходим в function.php и добавляем необходимые хуки для работы
+----------------------------- Содержимое файла  ------------------------------------
+<?php
+// подписываемся на хуки
+// добовление акшона, после установке темы, запускаем следуюшию функцию
+add_action('after_setup_theme', 'si_setup');
+// Добавить или убрать полосу на сайте админ false - убрать
+add_filter('show_admin_bar', '__return_true');
+function si_setup() {
+    // добовлениие лого и миниатюры
+    add_theme_support('custom-logo');
+    // включение тайтал
+    add_theme_support('title-tag');
+    // Поддержка миниатюр
+    add_theme_support('post-thumbnails');
+}
+-----------------------------------------------------------------------------------
+- Заходим в админ -> внешний вид->темы->настройка нашей темы->свойства сайта: Добовляем лого и иконку
+-Далее в нашей верстке есть лого, добовляеем ее чере функцию. Заходим в header.php и находим где наше лого и вставляем
+ этот код. Так как если мы просто вставим <?php the_custom_logo(); ?> для вывода логотипа у нас попалзет верстка, поэтому
+ нам надо получить url картинки
+----------------------------- Содержимое файла  ------------------------------------
+                <a class="navbar-brand .logo">
+                    <?php
+                    // получаем ссылку на логотип
+                    $custom_logo__url = wp_get_attachment_image_src( get_theme_mod( 'custom_logo' ), 'full' );
+                    ?>
+                    <!-- вставляем этот логотип для отображение -->
+                    <img src="<?= $custom_logo__url[0]; ?>" alt="logo"  class="d-inline-block align-text-top img-user">
+                </a>
+-----------------------------------------------------------------------------------
+- теперь подключаем страницу 404.php
+ вставить 404 --------------------------------------
+
+
+-----------------------------------------
+3.3) Создание темы: "подключение меню"
+-----------------------------------------
+Стандартное меню нам не подходитwp_nav_menu([]), так как у нас классы которые в него нельзя вставить, поэтому выводим кастумное
+Меню у нас расположеное в файле header.php. Поєтопу виведем в все через foreach и подставим по местам.
+Для этого нам надо получить это меню. Сначало узнаем id, далее получаем масив и сортируем его, находим
+url и "title". Проходимся циклом и подставляем данные.
+
+
+----------------------------- Содержимое файла  ------------------------------------
+<?php
+                // формируем меню что бы добавить классы
+                $locations = get_nav_menu_locations();
+                // тут 2 id с масивами названием меню что у нас указано в админке (menu-footer и menu-header)
+//                var_dump($locations);
+                $menu_id = $locations['menu-header'];
+                // Получает элементы меню навигации в виде массива. И сортируем его по возрастанию
+                // 'orderby' => 'menu_order' -- сортировка по позиции которые указаны в админке. Подробно тут
+                //  https://wp-kama.ru/function/wp_get_nav_menu_items
+                $menu_items = wp_get_nav_menu_items($menu_id, [
+                    'order'=> 'ASC',
+                    'orderby' => 'menu_order'
+                ]);
+                // Выдаст обьекты с параметрами сылки. Самое главное это url и "title"
+//                var_dump($menu_items);
+                ?>
+                <div class="collapse navbar-collapse" id="navbarTogglerDemo02">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <?php
+                    // проходимся циклом
+                    foreach ($menu_items as $item):
+                    ?>
+                        <!-- подставляем  -->
+                        <li class="nav-item">
+                            <!-- подставляем даные которые получили из масива -->
+                            <a class="nav-link" href="<?= $item->url; ?>"><?= $item->title; ?></a>
+                         </li>
+                    <?php endforeach; ?>
+
+                    </ul>
+                </div>
+
+-----------------------------------------------------------------------------------
+-----------------------------------------
+3.4) Создание темы: "Сделать поле для заголовка сайт" (доп меню в настройках WP)
+-----------------------------------------
+- Сначало мы должны добавить экшон для админки
+- потом мы ставим настройки шо да как и в каком пункте после чего и где должно быть
+- Далее мы работаем над версткой, для отправки
+----------------------------- Содержимое файла  ------------------------------------
+// добовляем заголовка (добовляем строку в меню)
+add_action('admin_init', 'ph_register_topic');
+
+// Добовляем поле в настройках админки, для заголовка сайта
+function ph_register_topic() {
+    // Регистрация поля, отвечает за отображение inputa
+    // id, дискрипшон, ну это кол бек функция, ярлык ст настроек(типа обшие настройки или новое)(ярлык смотреть в url, без option),
+    // секции в настройках, параметры-доп (который входит в функцию html кода нашего 3 пункта колбекфункции)
+    // Подробности тут  https://wp-kama.ru/function/add_settings_field
+    add_settings_field(
+        'ph_option_field_topic',
+        'Заголовок вашего сайта:',
+        'ph_option_topic_cb',
+        'general',
+        'default',
+        ['label_for' => 'ph_option_field_topic']
+    );
+    // Потом регистрация самой настройки, что бы сохранить это параметр
+    // ярлык страницы настроек, id нашего поля, какой тип данных у нас хранится либо масивом либо колбекфункцией санитайз,
+    // strval-- пытается привратить его строку   https://www.php.net/manual/ru/function.strval.php
+    // инфа тут   https://wp-kama.ru/function/register_setting
+    register_setting(
+        'general',
+        'ph_option_field_topic',
+        'strval'
+    );
+}
+
+// Вывод html кода
+function ph_option_topic_cb($args) {
+// То что мы получили от функции add_settings_field это приходит автоматом масив, мы тут его и вказываем
+    $slug = $args['label_for'];
+    ?>
+    <!--
+    type="text" ---- ну тут все ясно это тип инпута
+    id="..."   --- вывод id который мы указали как масив верху
+    value="..." --- вывод значение которо было записано в бд
+    name="..." ---  имя для отправки по нашему id
+     class="regular-text code" --- так как инпут получился маленький, мы заходим в админку и смотрим что за класс в других инпутов по длинее, копируем его и добовляем к нам
+    -->
+    <input
+        type="text"
+        id="<?= $slug; ?>"
+        value="<?= get_option($slug); ?>"
+        name="<?= $slug; ?>"
+        class="regular-text code"
+    >
+    <?php
+}
+
+-----------------------------------------------------------------------------------
+И там где хочу вывести эту надпись, вожу такую функцию
+<!-- Вывод кастумного слогана-->
+        <h1><?= get_option('ph_option_field_topic'); ?></h1>
+
+
+-----------------------------------------
+3.5) Создание темы: "создание виджета - подвал сылки"
+-----------------------------------------
+В подвале у нас есть сылки, что бы их поменять нужно туда поместить виджет, и тогда легко можно поменять то что ты хочешь
+Для этого переходим в function.php
+-  Регестрируем виджет add_action('widgets_init', 'ph_register')
+- В ф-ции ph_register регестрируется в админке Сайдбар и сам файл названия виджета
+- подключаем этот файл
+
+----------------------------- Содержимое файла  ------------------------------------
+// Подом подключаем widget
+ require_once (__DIR__ . '/inc/widget-info-links.php');
+
+// активация виджетов
+add_action('widgets_init', 'ph_register');
+
+ function ph_register() {
+       register_sidebar([
+           'name' => 'Сайдбар в футоре - Колонка 1',
+           'id' => 'ph-footer-column-1',
+           'before_widget' => null,
+           'after_widget' => null
+       ]);
+       register_sidebar([
+           'name' => 'Сайдбар в футоре - Колонка 2',
+           'id' => 'ph-footer-column-2',
+           'before_widget' => null,
+           'after_widget' => null
+       ]);
+       register_sidebar([
+           'name' => 'Сайдбар в футоре - Колонка 3',
+           'id' => 'ph-footer-column-3',
+           'before_widget' => null,
+           'after_widget' => null
+       ]);
+       register_sidebar([
+           'name' => 'Сайдбар в футоре - Колонка 4',
+           'id' => 'ph-footer-column-4',
+           'before_widget' => null,
+           'after_widget' => null
+       ]);
+
+       register_widget('Ph_Widget_Info_Links');
+   }
+
+-----------------------------------------------------------------------------------
+- Создаем папку в нашем проэкте, в нем файл нашего будуюшего виджета /inc/widget-info-links.php
+- public function __construct() --- перерегестрируем конструктор, В нем заполняем данные для регестрации и вывода виджета
+id_base: название, такое же самое как и самого название класса
+name: имя которое будет отображатс в админ манеле этого виджета
+widget_options: масив данных 'name' и 'description' про этот виджет
+
+- public function form($instance) --- форма, которая выводится в админ панели, то что надо вывести в админке, где $instance
+это то что водится в форму и отправляется в бд. Там просто сваляешь html форму для отображение. Что бы жоско невписывать
+данные используются функции/метода wp для отслеживание и генерации данных
+- public function widget($args, $instance) --- то что выводин на фронтент сторону, для отображение, где
+$args --- это доп функции, типа вывод html кода до и после
+$instance --- это вывод самого сообшение из бд
+- public function update($new_instance, $old_instance) --- когда обновляешь данные и обновляешь что бы все оставалось в форме
+
+- В файле functions.php регестрируем этот файл
+
+----------------------------- Содержимое файла  ------------------------------------
+<?php
+
+class Ph_Widget_Info_Links extends WP_Widget {
+// перерегестрируем конструктор
+    public function __construct() {
+        // Вызываем конструктор родительского класса
+        parent::__construct(
+            'ph_widget_info_link',
+            __('External Link Widget', 'text_domain'),
+            [
+                'name' => 'External Link Widget - виджет перехода',
+                'description' => __( 'Переход на другой сайт', 'text_domain' ),
+            ]
+        );
+    }
+
+//    то что выводин на фронтент сторону
+    public function widget( $args, $instance ) {
+        // Получаем данные из параметров виджета
+        $external_link = isset( $instance['external_link'] ) ? $instance['external_link'] : '';
+        $link_text = isset( $instance['link_text'] ) ? $instance['link_text'] : '';
+
+        // Если ссылка на внешний сайт задана
+        if ( ! empty( $external_link ) ) {
+            // Генерируем HTML-код ссылки
+            $html = '<a href="' . esc_url( $external_link ) . '">' . esc_html( $link_text ) . '</a>';
+            // Выводим сгенерированный HTML-код на экран
+            echo $html;
+        }
+    }
+
+//    форма, которая выводится в админ
+    public function form( $instance ) {
+        // Получаем данные из параметров виджета
+        $external_link = isset( $instance['external_link'] ) ? $instance['external_link'] : '';
+        $link_text = isset( $instance['link_text'] ) ? $instance['link_text'] : '';
+
+        // Генерируем HTML-код формы редактирования виджета
+        ?>
+        <p>
+            <label for="<?php echo $this->get_field_id( 'external_link' ); ?>"><?php esc_attr_e( 'Ссылка на внешний сайт:', 'text_domain' ); ?></label>
+            <input class="widefat" id="<?php echo $this->get_field_id( 'external_link' ); ?>" name="<?php echo $this->get_field_name( 'external_link' ); ?>" type="text" value="<?php echo esc_attr( $external_link ); ?>">
+        </p>
+        <p>
+            <label for="<?php echo $this->get_field_id( 'link_text' ); ?>"><?php esc_attr_e( 'Текст ссылки:', 'text_domain' ); ?></label>
+            <input class="widefat" id="<?php echo $this->get_field_id( 'link_text' ); ?>" name="<?php echo $this->get_field_name( 'link_text' ); ?>" type="text" value="<?php echo esc_attr( $link_text ); ?>">
+        </p>
+        <?php
+    }
+
+//    когда обновляешь данные
+    public function update( $new_instance, $old_instance ) {
+        // Санитизация и сохранение данных из формы редактирования виджета
+        $instance = [];
+        $instance['external_link'] = isset( $new_instance['external_link'] ) ? sanitize_text_field( $new_instance['external_link'] ) : '';
+        $instance['link_text'] = isset( $new_instance['link_text'] ) ? sanitize_text_field( $new_instance['link_text'] ) : '';
+        return $instance;
+    }
+}
+-----------------------------------------------------------------------------------
+- Затем в footer.php пишем этот код что бы вывести, так как он внизу, что бы не повторятся. Мы проходимся через  foreach
+- вставляем в нушу верстку
+                 <?php
+                    $dynamic_sidebar = [ 'ph-footer-column-1', 'ph-footer-column-2', 'ph-footer-column-3', 'ph-footer-column-4' ];
+
+                    foreach ( $dynamic_sidebar as $sidebar) {
+                        if ( is_active_sidebar( $sidebar ) ) { // Проверяем, есть ли виджеты в текущем столбце
+                            dynamic_sidebar( $sidebar ); // Выводим виджеты из текущего столбца
+                        }
+                    }
+
+                 ?>
+- Заходим в админку внешний вид-виджеты и добовляем наш виджет в сайдбар подписывает то что надо и проверяем.
+
+
+-----------------------------------------
+3.6) Создание темы: "Работа над страницей - About me"
+-----------------------------------------
+Так как страница About me это статическая страница, там будет информация про автора сайта. Поэтому мы создадим
+создали файл page-about.php
+В нем ведем следующий код
+
+----------------------------- Содержимое файла  ------------------------------------
+<?php
+/*
+Template Name: about
+*/
+// подключаем хедер
+get_header();
+?>
+
+	<main>
+		<?php
+		// проверка есть ли посты
+		if(have_posts()) :
+			while (have_posts()):
+		// Функция выводы записи из бд, очень важный параметр, если его не дать то страница выведится в бесконечный цикл
+				the_post();
+		?>
+		<div class="container mtb-10 ">
+			<div class="row">
+				<div class="col-md-4">
+<!--Вставляем фотку с задаными классами-->
+					<?php the_post_thumbnail('medium', ['class' => 'mg-fluid rounded-circle mb-3 img-thumbnail']); ?>
+
+				</div>
+				<div class="col-md-8">
+					<!-- выводит заголовок -->
+					<h1><?php the_title(); ?></h1>
+					<?php the_content(); ?>
+				</div>
+			</div>
+		</div>
+		<?php
+			endwhile;
+		endif;
+		?>
+	</main>
+
+<?php
+// подключаем футер
+get_footer();
+?>
+
+
+-----------------------------------------------------------------------------------
+- Template Name: about ---- Тут задеем шаблон, что бы подключить к странице админке.
+- get_header(); --- подключение хедера
+- дальше идет проверка есть ли какие то посты, если нету. ТО нечего не выводим.
+- Потом стандартный цикл WP
+- the_post_thumbnail --- это вывод картинки
+- <?php the_title(); ?> --- вывод название
+- <?php the_content(); ?> --- вывод самого контекта
+- get_footer(); --- подключаем футер
+
+Далее заходим в админку - страницы - создаем страницу с названием About me
+- добовляем изображение
+- Добовляем текст и обновляем.
+
+А для более интересного добовление можно включить Gutenberg. Для этого в function.php добовляем такую запись
+add_action('init', 'enable_gutenberg_for_pages');
+function enable_gutenberg_for_pages() {
+    add_post_type_support('page', 'editor');
+}
+
+-----------------------------------------
+3.7) Создание темы: "Работа над главной страницей - index.php"  ---- function.php
+-----------------------------------------
+Так как у нас фаил index.php может отвечает за 2 странички, мы сделаем логику и разделем ее на раздел с теорией и практикой
+Они должны быть индетичны, но с разной базой данных. Так как у нас есть менюшка/ карточка которое отображает категорию, а
+дальше оглавление и надпись. мы можем добавить раздел категорий. Что бы она высвечивалась и под этой категории были определенная тема.
+Для этого надо создать в админ панели 2 пункта меню, это у нас будет таксономия в ней подпункты.
+- Для этого заходим в фаил function.php
+- добовляем хук для регистрации таксономии
+// включить Gutenberg и регистрация таксономии
+add_action('init', 'ph_register_types');
+- Затем пишем саму функцию с таксономией
+- в ней стати будет включение Gutenberg для страниц about
+
+----------------------------- Содержимое файла  ------------------------------------
+    // включить Gutenberg для страниц about
+    add_post_type_support('page', 'editor');
+
+
+// таксономия
+    // текст который будет отображатся в админке (ярлык будет участвовать в url)
+    register_post_type( 'theory', [
+        'labels' => [
+            'name'               => 'Теория', // основное название для типа записи
+            'singular_name'      => 'Теория', // название для одной записи этого типа
+            'add_new'            => 'Добавить новую тему', // для добавления новой записи
+            'add_new_item'       => 'Добавить новую тему', // заголовка у вновь создаваемой записи в админ-панели.
+            'edit_item'          => 'Редактировать тему', // для редактирования типа записи
+            'new_item'           => 'Новая Тема', // текст новой записи
+            'view_item'          => 'Смотреть Теорию', // для просмотра записи этого типа.
+            'search_items'       => 'Искать тему', // для поиска по этим типам записи
+            'not_found'          => 'Не найдено', // если в результате поиска ничего не было найдено
+            'not_found_in_trash' => 'Не найдено в корзине', // если не было найдено в корзине
+            'parent_item_colon'  => '', // для родителей (у древовидных типов)
+            'menu_name'          => 'Теория', // название меню
+        ],
+        'public'              => true,  // отображение в интерфейсе админки
+        'menu_position'       => 20,  // чем больше число тем ниже путь
+        'menu_icon'           =>  'dashicons-editor-paste-text',  // можно либо указать из списка иконок https://developer.wordpress.org/resource/dashicons/#id        или       _si_assets_path('img/icons/arrow_black.png')   // это путь до иконки который у нас есть
+        'hierarchical'        => false,  //  если тип записи можно вкладывать в друг друга именно тип записей
+        'supports'            => ['title', 'editor'],  // массив с ярлыками, для записей с заголовок, текст и картинка .....['title', 'editor', 'thumbnail'] title --- должен быть всегда !!!
+        'has_archive' => true  // под этот тип запись нужно зарегестрировать отдельный тип записей
+    ]);
+
+    // Регистрация пользовательскую таксономию WP. (ярлык, масив ярлыки тех видов запесей которые можно привезать, список)
+    register_taxonomy('theory_category', ['theory'], [
+        'labels'                => [
+            'name'              => 'Категория темы',
+            'singular_name'     => 'Название категории',
+            'search_items'      => 'Найти категорию',
+            'all_items'         => 'Все категории',
+            'view_item '        => 'Посмотреть категорию',
+            'edit_item'         => 'Редактировать категорию',
+            'update_item'       => 'Обновить',
+            'add_new_item'      => 'Добавить категорию темы',
+            'new_item_name'     => 'Добавить категорию темы',
+            'menu_name'         => 'Все категории темы',
+        ],
+        'description'           => '',
+        'public'                => true,   // вывод в админку
+        'hierarchical'          => true   // true -- рублики, false  -- метки. рекомендуется всегда true, для легчей работы
+    ]);
+
+    register_post_type( 'practice', [
+        'labels' => [
+            'name'               => 'Практика', // основное название для типа записи
+            'singular_name'      => 'Практика', // название для одной записи этого типа
+            'add_new'            => 'Добавить новую тему', // для добавления новой записи
+            'add_new_item'       => 'Добавить новую тему', // заголовка у вновь создаваемой записи в админ-панели.
+            'edit_item'          => 'Редактировать тему', // для редактирования типа записи
+            'new_item'           => 'Новая Тема', // текст новой записи
+            'view_item'          => 'Смотреть Практика', // для просмотра записи этого типа.
+            'search_items'       => 'Искать тему', // для поиска по этим типам записи
+            'not_found'          => 'Не найдено', // если в результате поиска ничего не было найдено
+            'not_found_in_trash' => 'Не найдено в корзине', // если не было найдено в корзине
+            'parent_item_colon'  => '', // для родителей (у древовидных типов)
+            'menu_name'          => 'Практика', // название меню
+        ],
+        'public'              => true,  // отображение в интерфейсе админки
+        'menu_position'       => 20,  // чем больше число тем ниже путь
+        'menu_icon'           =>  'dashicons-book-alt',  // можно либо указать из списка иконок https://developer.wordpress.org/resource/dashicons/#id        или       _si_assets_path('img/icons/arrow_black.png')   // это путь до иконки который у нас есть
+        'hierarchical'        => false,  //  если тип записи можно вкладывать в друг друга именно тип записей
+        'supports'            => ['title', 'editor'],  // массив с ярлыками, для записей с заголовок, текст и картинка .....['title', 'editor', 'thumbnail'] title --- должен быть всегда !!!
+        'has_archive' => true  // под этот тип запись нужно зарегестрировать отдельный тип записей
+    ]);
+
+    register_taxonomy('practice_category', ['practice'], [
+        'labels'                => [
+            'name'              => 'Категория практики',
+            'singular_name'     => 'Название категории',
+            'search_items'      => 'Найти категорию',
+            'all_items'         => 'Все категории',
+            'view_item '        => 'Посмотреть категорию',
+            'edit_item'         => 'Редактировать категорию',
+            'update_item'       => 'Обновить',
+            'add_new_item'      => 'Добавить категорию практики',
+            'new_item_name'     => 'Добавить категорию практики',
+            'menu_name'         => 'Все категории практики',
+        ],
+        'description'           => '',
+        'public'                => true,   // вывод в админку
+        'hierarchical'          => true   // true -- рублики, false  -- метки. рекомендуется всегда true, для легчей работы
+    ]);
+}
+-----------------------------------------------------------------------------------
+- теперь для теста добави пару тем добавим
+- у нас появился подпункт и добавим тоже категории
+-----------------------------------------
+3.7.1) Создание темы: "Работа над главной страницей - theory"
+-----------------------------------------
+Давайте посмотрим на верску и подумаем что надо тут сделать.
+1) Название странички и описание ее - это можно засунуть в виджеты
+2) Затем у нас есть категории - мы можем вывести их в движешуюся строку с помошью js
+3) У нас есть колонка/меню/карточка для вывода текста. Он выводит оглавление с текстом заданой категории - что бы вывести
+это все воспользуемся WP_Query($args) и потом стандартным циклом wp подставим это все
+4) пагинация - что бы у нас небыло достаточно длинная страница, давайте разделем ее по частям с помошью пагинацией.
+- После того кода мы набрасали план действий давайте приступим к его выполнению по пунктам.
+
+-----------------------------------------
+3.7.1.1) Создание темы: "Работа над главной страницей - theory" --- Виджет
+-----------------------------------------
+Тут все просто, нам надо 2 инпута, второй сделаем WP текстовый редактор.
+- Для начало делаем в function.php добавим 2 сайдбара для практике и для теории
+
+   function ph_register() {
+       register_sidebar([
+           'name' => 'Сайдбар описание - раздел Теория',
+           'id' => 'ph-description-section-theory',
+           'before_widget' => null,
+           'after_widget' => null
+       ]);
+       register_sidebar([
+           'name' => 'Сайдбар описание - раздел Практике',
+           'id' => 'ph-description-section-practice',
+           'before_widget' => null,
+           'after_widget' => null
+       ]);
+       register_widget('Ph_Description_Section');
+    }
+- затем зарегестрируем виджет и пропишем ему путь
+ require_once (__DIR__ . '/inc/description-section.php');
+- Создаем файл виджета в  int/description-section.php
+- Заполняем пункты название в конструкторе, вывод во фронтент добовляем необходимые стили для отображение, для админки
+первый инпут текстовое поле простое. Второй инпут делаем текстовый редактор WP, а update стандартный.
+
+----------------------------- Содержимое файла  ------------------------------------
+class Ph_Description_Section extends WP_Widget {
+	/**
+	 * Конструктор класса
+	 */
+	public function __construct() {
+		// Вызываем конструктор родительского класса
+		parent::__construct(
+			'ph_description_section',
+			__('Page theme', 'page_description'),
+			[
+				'name' => 'Description section page - Описание страницы',
+				'description' => __('Тема и описание страницы', 'page_description'),
+			]
+		);
+	}
+
+	/**
+	 * Выводит виджет на фронтенд
+	 *
+	 * @param array $args     Аргументы виджета.
+	 * @param array $instance Данные виджета.
+	 */
+	public function widget($args, $instance) {
+		// Получаем данные из параметров виджета
+		$page_theme = wp_kses_post($instance['page_theme']);
+		$page_description = wp_kses_post($instance['page_description']);
+
+		// Если задана тема страницы
+		if (!empty($page_theme)) {
+			// Генерируем HTML-код темы и описания страницы
+			$html = "<h2 class=\"fw-light\">$page_theme</h2><p class=\"lead text-muted\">$page_description</p>";
+			// Выводим сгенерированный HTML-код на экран
+			echo $html;
+		}
+	}
+
+	/**
+	 * Выводит форму редактирования виджета в админке
+	 *
+	 * @param array $instance Данные виджета.
+	 */
+	public function form($instance) {
+		// Получаем данные из параметров виджета и проверяет на пустоту
+		$page_theme = isset($instance['page_theme']) ? wp_kses_post($instance['page_theme']) : '';
+		$page_description = isset($instance['page_description']) ? wp_kses_post($instance['page_description']) : '';
+
+		?>
+<!-- Формируем инпут для вода темы -->
+		<p>
+			<label for="<?php echo $this->get_field_id('page_theme'); ?>"><?php esc_attr_e('Название темы страницы:'); ?></label>
+			<input class="widefat" id="<?php echo $this->get_field_id('page_theme'); ?>" name="<?php echo $this->get_field_name('page_theme'); ?>" type="text" value="<?php echo esc_attr($page_theme); ?>">
+		</p>
+		<p>
+			<!-- Формируем инпут для вода текста, подключаем WP редактор -->
+			<label for="<?php echo $this->get_field_id('page_description'); ?>"><?php esc_attr_e('Описание страницы:'); ?></label>
+			<?php
+			$editor_content = $page_description;
+			$editor_id = $this->get_field_id('page_description');
+			$editor_name = $this->get_field_name('page_description');
+			$settings = [
+				'textarea_name' => $editor_name,
+				'textarea_rows' => 5
+			];
+			// Выводим редактор TinyMCE для поля "Описание страницы"
+			wp_editor($editor_content, $editor_id, $settings);
+			?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Обновляет данные виджета при сохранении
+	 *
+	 * @param array $new_instance Новые данные виджета.
+	 * @param array $old_instance Предыдущие данные виджета.
+	 * @return array Обновленные данные виджета.
+	 */
+	public function update( $new_instance, $old_instance ) {
+		// Санитизация и сохранение данных из формы редактирования виджета
+		$instance = [];
+		$instance['page_theme'] = isset($new_instance['page_theme']) ? wp_kses_post($new_instance['page_theme']) : '';
+		$instance['page_description'] = isset($new_instance['page_description']) ? wp_kses_post($new_instance['page_description']) : '';
+		return $instance;
+	}
+}
+
+
+-----------------------------------------------------------------------------------
+
+- добовляем на страничку индекса вывод в нашу верстку
+                     <?php
+                    // вывод темы страници и описание через виджет
+                        if ( is_active_sidebar( 'ph-description-section-theory' ) ) { // Проверяем, есть ли виджеты в текущем столбце
+                        dynamic_sidebar( 'ph-description-section-theory' ); // Выводим виджеты из текущего столбца
+                        }
+                    ?>
+- заходим в админку добовляем виджет в сайдбар пишем текст и проверяем работу способность.
+
+
+-----------------------------------------
+3.7.1.2) Создание темы: "Работа над главной страницей - theory" --- категории
+-----------------------------------------
+- Для начало надо получить данные что в нашем поле таксономия. (то что мы забили в категорию)
+    //  Получаем теги категорий
+    $theoryCategory = get_terms([
+        'taxonomy' => 'theory_category',
+        'order' => 'ASC',
+        'orderby' => 'slug'
+    ]);
+- потом мы эти данные вставляем в наш цикл и переходим в js
+                <div class="carousel-track">
+                <!--  Тут карусель из категорий(тем). Проходимся циклом и подставляем, а дальше через js делаем безконечное движение  -->
+                    <?php $arr = []; foreach ($theoryCategory as $cat):
+                        $arr[$cat->slug] = $cat->name;
+                        ?>
+                    <a class="carousel-block" href="?category=<?= $cat->slug;?>"> <?= $cat->name;?> </a>
+                     <?php endforeach;?>
+                </div>
+- фаил main.js
+----------------------------- Содержимое файла  ------------------------------------
+// Получаем ссылку на контейнер карусели
+var carouselContainer = document.querySelector('.carousel-container');
+var carouselTrack = carouselContainer.querySelector('.carousel-track');
+var carouselItems = carouselContainer.querySelectorAll('.carousel-block');
+var carouselWidth = carouselContainer.offsetWidth;
+var currentIndex = 0;
+var direction = 1; // Направление движения (1 - вперед, -1 - назад)
+
+// Копируем каждый элемент и добавляем его в конец трека
+carouselItems.forEach(function(item) {
+    carouselTrack.appendChild(item.cloneNode(true));
+});
+
+// Устанавливаем ширину трека равной общей ширине карусели
+function recalculateCarouselWidth() {
+    var carouselWidth = carouselContainer.offsetWidth;
+    var totalWidth = 0;
+
+    carouselItems.forEach(function(item) {
+        totalWidth += item.offsetWidth;
+    });
+
+    var neededCopies = Math.ceil(carouselWidth / totalWidth) + 1;
+    for (var i = 0; i < neededCopies; i++) {
+        carouselItems.forEach(function(item) {
+            carouselTrack.appendChild(item.cloneNode(true));
+        });
+    }
+
+    carouselTrack.style.width = totalWidth * neededCopies + 'px';
+}
+
+recalculateCarouselWidth();
+
+// Анимируем карусель
+function animateCarousel() {
+    setInterval(function() {
+        var itemWidth = carouselItems[currentIndex].offsetWidth;
+        var trackOffset = -itemWidth * currentIndex;
+
+        carouselTrack.style.transform = 'translateX(' + trackOffset + 'px)';
+
+        currentIndex += direction;
+
+        if (currentIndex >= carouselItems.length) {
+            currentIndex = 0;
+            carouselTrack.style.transition = 'none';
+            carouselTrack.style.transform = 'translateX(0)';
+            setTimeout(function() {
+                carouselTrack.style.transition = 'transform 0.5s ease-in-out';
+                carouselTrack.style.transform = 'translateX(' + (-carouselItems[currentIndex].offsetLeft) + 'px)';
+            }, 10);
+        }
+    }, 5000);
+}
+
+// Вызываем функцию для анимации карусели
+animateCarousel();
+-----------------------------------------------------------------------------------
+
+-----------------------------------------
+3.7.1.3) Создание темы: "Работа над главной страницей - theory" --- вывод текста
+-----------------------------------------
+Теперь будем формулировать запрос в БД будем использовать функцию WP_Query($args);
+- Но для начало нам надо понять какая категория выбрана. Для этого получим данные  из гет параметров
+    // Получаем из гет параметров наименование категории
+    $theoryCategoryUrl = (isset($_GET['category'])) ? $_GET['category'] : '';
+- формируем запрос  в бд
+    // Формируем запрос в бд
+    $args = [
+        'numberposts' => -1,  //  Указываем что выводить все записи
+        'post_type' => 'theory',   //  тип записи у нас будет карты (он кастумный, находится в боковой панели, это таксономия)
+        'theory_category' => $theoryCategoryUrl,   // Наименование категории
+        'orderby' => 'meta_value_num',  // сортируем по этому полю, что бы сортировался по числу
+        'order' => 'ASC' , // способ сортировки по возрастанию
+        'posts_per_page' => 10, // Сколько посто будет выведено на страницу
+        'paged' => 2  // какая страница выбрата
+    ];
+    // Запрос в бд
+    $theoryQuery = new WP_Query($args);
+- открываем цикл и подставляем данные
+----------------------------- Содержимое файла  ------------------------------------
+<!--   проверяем есть ли пост, если есть Запуск стандартного цикла wp-->
+        <?php if ($theoryQuery->have_posts()) :?>
+        <div class="album py-5 bg-light" >
+            <div class="container">
+                <!-- начало-->
+                <div class="my-3 p-3 bg-body rounded shadow-sm">
+                    <!-- огловление-->
+                    <nav id="navbar-example2" class="navbar bg-light px-3 mb-3">
+                        <p class="navbar-brand">
+<!--  Вставляем выбраную категорию, сперва проверяем что она есть, если ее нет то выводим  'All themes'  -->
+                           <?php echo $theoryCategoryUrl == '' ? 'All themes' : $arr[$theoryCategoryUrl]; ?>
+                        </p>
+                        <ul class="nav nav-pills">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Dropdown</a>
+                                <ul class="dropdown-menu">
+                                    <!-- меню-->
+                                    <?php
+                                    // Задаем стандартный цикл и задаем данные, где $i=1 это для id что бы он мог найти
+                                    $i=1;
+                                    while ($theoryQuery->have_posts()) : $theoryQuery->the_post();
+                                    ?>
+                                    <li><a class="dropdown-item" href="#scrollspyHeading<?= $i ?>"><?php the_title(); ?></a></li>
+                                    <?php
+                                        $i++;
+                                        endwhile;
+                                    ?>
+                                    <!-- пролист в низ-->
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#scrollspyHeadingDown">Перейти в низ</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </nav>
+                    <!-- тело сообшение-->
+                    <div data-bs-spy="scroll" data-bs-target="#navbar-example2" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="scrollspy-example bg-light p-3 rounded-2" tabindex="0">
+                        <?php
+                        $i=1;
+                        while ($theoryQuery->have_posts()) : $theoryQuery->the_post();
+                        ?>
+                            <h4 id="scrollspyHeading<?= $i ?>"><?php   the_title(); ?></h4>
+                            <p><?php the_content(); ?></p>
+
+                        <?php
+                            $i++;
+                            endwhile;
+                        ?>
+                        <h4 id="scrollspyHeadingDown"></h4>
+                    </div>
+                </div>
+                <!-- конец-->
+            </div>
+        </div>
+
+            <?php
+
+          endif;
+          // Восстанавливаем оригинальный запрос, чтобы не нарушать работу других циклов на странице
+                  wp_reset_postdata();
+         ?>
+-----------------------------------------------------------------------------------
+
+-----------------------------------------
+3.7.1.4) Создание темы: "Работа над главной страницей - theory" --- пагинация
+-----------------------------------------
+- Для начало мы формируем запрос пагинации
+
+    // Выводим пагинацию
+            $pagination = paginate_links([
+            'prev_text' => '&laquo;',
+            'next_text' => '&raquo;',
+            'type' => 'array',
+            'format' => '?&page=%#%',  // указываем как будет выводится get параметр, это параметр зарезервирован wp
+            'current' => max(1, get_query_var('page')),
+            'total' => $theoryQuery->max_num_pages, // сколько всего страниц
+            'end_size'     => 1, // крайнии по одной выводить
+            'mid_size'     => 3 // середину 3 выводить, это если много страниц
+            ]);
+
+-  Потом подставляем ее в нашу верстку и проходимся циклом
+
+        // подставляем пагинацию и проходимся по циклу
+        if (!empty($pagination)) {
+        echo '<div class="pagination-container"><ul class="pagination">';
+                foreach ($pagination as $link) {
+                    $selected = isset($_GET['selected']) && $_GET['selected'] == $i + 1; // Проверяем, выбрана ли кнопка
+                    echo '<li class="page-item' . ($selected ? ' aria-current="page"' : '') . '">' . str_replace('page-numbers', 'page-link', $link) . '</li>';
+                }
+                echo '</ul></div>';
+        }
+
+ - назабываем в конце сбрасывать цикл WP что бы нечего не сломалось
+  // Восстанавливаем оригинальный запрос, чтобы не нарушать работу других циклов на странице
+         wp_reset_postdata();
+
+-----------------------------------------
+3.7.2) Создание темы: "Работа над главной страницей - practice"
+-----------------------------------------
+ Теперь переходим ко второй странице практика. Копируем все и меняем слова с theory на practice, проверяем работу способность
+если что то неработает разбираемся почему.
+Замечание, так как пагинация несработало пришлось заменить слово с page на paged - это 2 зарезервированые слова страници для отображение
+вот весь код нашего index
+
+----------------------------- Содержимое файла  ------------------------------------
+    <!-- подключаем хедер  -->
+    <?php
+    get_header();
+    // Делаем проверку на главную страницу, если не главная страница то запускаем все остальное
+    if(is_home()):
+    //  Получаем теги категорий
+        $theoryCategory = get_terms([
+            'taxonomy' => 'theory_category',
+            'order' => 'ASC',
+            'orderby' => 'slug'
+        ]);
+    //var_dump($theoryCategory);
+    // Получаем из бд какая сейчас страница
+        $paged = (get_query_var('page')) ? get_query_var('page') : 1;
+    //var_dump($paged);
+    // Получаем из гет параметров наименование категории
+    $theoryCategoryUrl = (isset($_GET['category'])) ? $_GET['category'] : '';
+    //var_dump($theoryCategoryUrl);
+    // Формируем запрос в бд
+        $args = [
+            'numberposts' => -1,  //  Указываем что выводить все записи
+            'post_type' => 'theory',   //  тип записи у нас будет карты (он кастумный, находится в боковой панели, это таксономия)
+            'theory_category' => $theoryCategoryUrl,   // Наименование категории
+            'orderby' => 'meta_value_num',  // сортируем по этому полю, что бы сортировался по числу
+            'order' => 'ASC' , // способ сортировки по возрастанию
+            'posts_per_page' => 10, // Сколько посто будет выведено на страницу
+            'paged' => $paged  // какая страница выьрана
+        ];
+        // Запрос в бд
+        $theoryQuery = new WP_Query($args);
+    //    var_dump( $theoryQuery->get_posts());
+
+    ?>
+
+        <!-- середина, она и будет менятся-->
+        <main>
+            <section class="py-5 text-center container">
+                <div class="row py-lg-5">
+                    <div class="col-lg-6 col-md-8 mx-auto">
+                        <?php
+                        // вывод темы страници и описание через виджет
+                            if ( is_active_sidebar( 'ph-description-section-theory' ) ) { // Проверяем, есть ли виджеты в текущем столбце
+                            dynamic_sidebar( 'ph-description-section-theory' ); // Выводим виджеты из текущего столбца
+                            }
+                        ?>
+                    </div>
+                </div>
+            </section>
+            <!-- карусель -->
+            <div class="container center">
+                <div class="carousel-container ">
+                    <div class="carousel-track">
+    <!--  Тут карусель из категорий(тем). Проходимся циклом и подставляем, а дальше через js делаем безконечное движение  -->
+                        <?php $arr = []; foreach ($theoryCategory as $cat):
+                            $arr[$cat->slug] = $cat->name;
+                            ?>
+                        <a class="carousel-block" href="?category=<?= $cat->slug;?>"> <?= $cat->name;?> </a>
+                         <?php endforeach;?>
+                    </div>
+                </div>
+            </div>
+
+
+    <!--   проверяем есть ли пост, если есть Запуск стандартного цикла wp-->
+            <?php if ($theoryQuery->have_posts()) :?>
+            <div class="album py-5 bg-light" >
+                <div class="container">
+                    <!-- начало-->
+                    <div class="my-3 p-3 bg-body rounded shadow-sm">
+                        <!-- огловление-->
+                        <nav id="navbar-example2" class="navbar bg-light px-3 mb-3">
+                            <p class="navbar-brand">
+    <!--  Вставляем выбраную категорию, сперва проверяем что она есть, если ее нет то выводим  'All themes'  -->
+                               <?php echo $theoryCategoryUrl == '' ? 'All themes' : $arr[$theoryCategoryUrl]; ?>
+                            </p>
+                            <ul class="nav nav-pills">
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Dropdown</a>
+                                    <ul class="dropdown-menu">
+                                        <!-- меню-->
+                                        <?php
+                                        // Задаем стандартный цикл и задаем данные, где $i=1 это для id что бы он мог найти
+                                        $i=1;
+                                        while ($theoryQuery->have_posts()) : $theoryQuery->the_post();
+                                        ?>
+                                        <li><a class="dropdown-item" href="#scrollspyHeading<?= $i ?>"><?php the_title(); ?></a></li>
+                                        <?php
+                                            $i++;
+                                            endwhile;
+                                        ?>
+                                        <!-- пролист в низ-->
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#scrollspyHeadingDown">Перейти в низ</a></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </nav>
+                        <!-- тело сообшение-->
+                        <div data-bs-spy="scroll" data-bs-target="#navbar-example2" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="scrollspy-example bg-light p-3 rounded-2" tabindex="0">
+                            <?php
+                            $i=1;
+                            while ($theoryQuery->have_posts()) : $theoryQuery->the_post();
+                            ?>
+                                <h4 id="scrollspyHeading<?= $i ?>"><?php   the_title(); ?></h4>
+                                <p><?php the_content(); ?></p>
+
+                            <?php
+                                $i++;
+                                endwhile;
+                            ?>
+                            <h4 id="scrollspyHeadingDown"></h4>
+                        </div>
+                    </div>
+                    <!-- конец-->
+                </div>
+            </div>
+
+                <?php
+
+            endif;
+
+            // Выводим пагинацию
+            $pagination = paginate_links([
+            'prev_text' => '&laquo;',
+            'next_text' => '&raquo;',
+            'type' => 'array',
+            'format' => '?&page=%#%',  // указываем как будет выводится get параметр, это параметр зарезервирован wp
+            'current' => max(1, get_query_var('page')),
+            'total' => $theoryQuery->max_num_pages, // сколько всего страниц
+            'end_size'     => 1, // крайнии по одной выводить
+            'mid_size'     => 3 // середину 3 выводить, это если много страниц
+            ]);
+
+
+    //var_dump($pagination);
+            // подставляем пагинацию и проходимся по циклу
+            if (!empty($pagination)) {
+            echo '<div class="pagination-container"><ul class="pagination">';
+                    foreach ($pagination as $link) {
+                        $selected = isset($_GET['selected']) && $_GET['selected'] == $i + 1; // Проверяем, выбрана ли кнопка
+                        echo '<li class="page-item' . ($selected ? ' aria-current="page"' : '') . '">' . str_replace('page-numbers', 'page-link', $link) . '</li>';
+                    }
+                    echo '</ul></div>';
+            }
+
+
+
+            // Восстанавливаем оригинальный запрос, чтобы не нарушать работу других циклов на странице
+            wp_reset_postdata();
+            ?>
+
+            <!-- Поднятся в верх -->
+            <div class="position-relative text-user">
+                <p class="position-absolute bottom-0 end-0">
+                    <a  href="#">Up</a>
+                </p>
+            </div>
+        </main>
+    <?php
+    // Эта страница будет практика. Все тоже самое только меняем ярлык на practice
+    else:
+    //  Получаем теги категорий
+        $practiceCategory = get_terms([
+        'taxonomy' => 'practice_category',
+        'order' => 'ASC',
+        'orderby' => 'slug'
+        ]);
+        //var_dump($practiceCategory);
+    // Получаем из бд какая сейчас страница
+        $page =  get_query_var('paged') ? get_query_var('paged') : 1;
+        //var_dump($page);
+    // Получаем из гет параметров наименование категории
+        $practiceCategoryUrl = (isset($_GET['category'])) ? $_GET['category'] : '';
+        //var_dump($practiceCategoryUrl);
+        $args = [
+        'numberposts' => -1,  //  Указываем что выводить все записи
+        'post_type' => 'practice',   //  тип записи у нас будет карты (он кастумный, находится в боковой панели, это таксономия)
+        'practice_category' => $practiceCategoryUrl,
+        'orderby' => 'meta_value_num',  // сортируем по этому полю, что бы сортировался по числу
+        'order' => 'ASC' , // способ сортировки по возрастанию
+        'posts_per_page' => 10,
+        'paged' => $page
+        ];
+
+        $practiceQuery = new WP_Query($args);
+        //    var_dump( $practiceQuery->get_posts());
+        ?>
+
+        <!-- середина, она и будет менятся-->
+        <main>
+            <section class="py-5 text-center container">
+                <div class="row py-lg-5">
+                    <div class="col-lg-6 col-md-8 mx-auto">
+                        <?php
+                        if ( is_active_sidebar( 'ph-description-section-practice' ) ) { // Проверяем, есть ли виджеты в текущем столбце
+                            dynamic_sidebar( 'ph-description-section-practice' ); // Выводим виджеты из текущего столбца
+                        }
+                        ?>
+                    </div>
+                </div>
+            </section>
+            <!-- карусель -->
+            <div class="container center">
+                <div class="carousel-container ">
+                    <div class="carousel-track">
+                        <?php $arr = []; foreach ($practiceCategory as $cat):
+                            $arr[$cat->slug] = $cat->name;
+                            ?>
+                            <a class="carousel-block" href="?category=<?= $cat->slug;?>"> <?= $cat->name;?> </a>
+                        <?php endforeach;?>
+                    </div>
+                </div>
+            </div>
+            <?php
+            if ($practiceQuery->have_posts()) :
+
+                ?>
+                <div class="album py-5 bg-light" >
+                    <div class="container">
+                        <!-- начало-->
+                        <div class="my-3 p-3 bg-body rounded shadow-sm">
+                            <!-- огловление-->
+                            <nav id="navbar-example2" class="navbar bg-light px-3 mb-3">
+                                <p class="navbar-brand">
+                                    <?php echo $practiceCategoryUrl == '' ? 'All themes' : $arr[$practiceCategoryUrl]; ?>
+                                </p>
+                                <ul class="nav nav-pills">
+                                    <li class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Dropdown</a>
+                                        <ul class="dropdown-menu">
+                                            <!-- меню-->
+                                            <?php
+                                            $i=1;
+
+                                            while ($practiceQuery->have_posts()) : $practiceQuery->the_post();
+                                                ?>
+                                                <li><a class="dropdown-item" href="#scrollspyHeading<?= $i ?>"><?php the_title(); ?></a></li>
+                                                <?php
+                                                $i++;
+                                            endwhile;
+                                            ?>
+                                            <!-- пролист в низ-->
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item" href="#scrollspyHeadingDown">Перейти в низ</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <!-- тело сообшение-->
+                            <div data-bs-spy="scroll" data-bs-target="#navbar-example2" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="scrollspy-example bg-light p-3 rounded-2" tabindex="0">
+                                <?php
+                                $i=1;
+                                while ($practiceQuery->have_posts()) : $practiceQuery->the_post();
+                                    ?>
+                                    <h4 id="scrollspyHeading<?= $i ?>"><?php   the_title(); ?></h4>
+                                    <p><?php the_content(); ?></p>
+
+                                    <?php
+                                    $i++;
+                                endwhile;
+                                ?>
+                                <h4 id="scrollspyHeadingDown"></h4>
+                            </div>
+                        </div>
+                        <!-- конец-->
+                    </div>
+                </div>
+            <?php
+            endif;
+            // Выводим пагинацию
+            $pagination = paginate_links([
+                'prev_text' => '&laquo;',
+                'next_text' => '&raquo;',
+                'type' => 'array',
+                'format' => '?paged=%#%',
+                'current' => max(1, get_query_var('paged')),
+                'total' => $practiceQuery->max_num_pages,
+                'end_size'     => 1,
+                'mid_size'     => 1
+            ]);
+
+            if (!empty($pagination)) {
+                echo '<div class="pagination-container"><ul class="pagination">';
+                foreach ($pagination as  $link) {
+                    echo '<li class="page-item'  . '">' . str_replace('page-numbers', 'page-link', $link) . '</li>';
+                }
+                echo '</ul></div>';
+            }
+
+            // Восстанавливаем оригинальный запрос, чтобы не нарушать работу других циклов на странице
+            wp_reset_postdata();
+            ?>
+
+            <!-- Поднятся в верх -->
+            <div class="position-relative text-user">
+                <p class="position-absolute bottom-0 end-0">
+                    <a  href="#">Up</a>
+                </p>
+            </div>
+        </main>
+
+    <!-- подключаем футер  -->
+    <?php
+        // закрывается тег if
+        endif;
+        get_footer();
+    ?>
+
+-----------------------------------------------------------------------------------
+
+-----------------------------------------
+3.8) Создание темы: "Log In"
+-----------------------------------------
+У нас еше остался залогироватся и мы создадим плагин типа использование куков.
+Что бы залогироватся будем использовать модальное окно от бутсрапа. Для этого в header.php мы сделаем логику
+пользователь залогирован да или нет, с помошью функции if (is_user_logged_in()) {, если нет то выведим кнопку залогироватся
+        } else {
+                    // сылка на логирование открытие модального окна
+                    echo "<a href=\"\" class=\"login\" data-bs-toggle=\"modal\" data-bs-target=\"#signIn\">Sign in</a>";
+        }
+- Дале перейдем в fоoter.php тут обычно вкладывают шаблон модального окна
+- С помошью функции выведим инпуты для логина <?php wp_login_form(); ?>
+
+        <!-- модальное окно старт-->
+        <div class="modal fade" id="signIn" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" >
+                <div class="modal-content">
+                    <!-- Содержимое модального окна -->
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="signIn">Sing In</h4>
+                        <button type="button"  class="btn-close close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+        <!--  Вывод формы логирование  -->
+                        <?php wp_login_form(); ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+- теперь надо прописать логику если ты вошол в систему. Для этого надо получить данные пользователя, вывести фотку
+имя, потом сылку для которая тебя приведет в адимн консоль и кнопку выхода из системы которая тебя редиректнит на главную страницу
+и это все мы положем в бутстраповский шаблон немного его поправив.
+----------------------------- Содержимое файла  ------------------------------------
+ <div class="right-login">
+            <?php
+            // Проверяет пользователь залогирован, если нет то выводит кнопку залогинится
+                if (is_user_logged_in()) {
+                // Получаем все про текушего пользователя
+                    $current_user = wp_get_current_user();
+
+                    ?>
+                    <div class="card mb-3 border-0 login-style">
+                        <div class="row g-0 ">
+                            <div class="col-md-4 ">
+<!--  Получаем фотку пользователя -->
+                                <div class="img-user d-flex  align-items-center">
+                               <?= get_avatar($current_user->user_email, 65);?>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card-body">
+                                    <!--  Получаем имя пользователя  -->
+                                    <h6 class="card-title">Greetings <?= $current_user->display_name; ?></h6>
+                                    <!--  Сылка в админ панель (консоль WP) -->
+                                    <a href="<?= admin_url('index.php'); ?>">
+                                        <small class="text-body-secondary">Console</small>
+                                    </a>
+                                    <!--  Выйти из акаунта (редирект на главную страницу) -->
+                                    <a href="<?= wp_logout_url(home_url()); ?>" >
+                                        <small class="text-body-secondary">Log-out</small>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php
+                } else {
+                    // сылка на логирование открытие модального окна
+                    echo "<a href=\"\" class=\"login\" data-bs-toggle=\"modal\" data-bs-target=\"#signIn\">Sign in</a>";
+                }
+            ?>
+
+        </div>
+-----------------------------------------------------------------------------------
+-----------------------------------------
+4) Создание плагина сообшений о куков
+-----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+4.1) Разработка собственого плагина 'Создание файла/активация/деактивация/вывод в админке'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Создаем собственый плагин, он будет выводить табличку 'Мы используем куки'. И у него будет своя страничка в админке.
+- В папке создаем папку с названием этого плагина wp-content->plugins/cookie-notify-loft. Название должно быть уникальном
+во всем БД WP магазине плагином. Вообшем такого плагина недолжно быть.
+- Создаем файл, где будет наш код плагина index.php, открываем его и заполняем
+- Пишем в коментариях что это плагин его название, описание и лицензию
+/*
+Plugin Name: Cookie Notify by loft
+Description: Выводит уведомление для пользователей сайта о том что используется его куки.
+License:     GPL2
+......
+*/
+
+- Пишем хук срабатываение при активации и деактивации
+register_activation_hook(__FILE__, 'cnl_activation');
+register_deactivation_hook(__FILE__, 'cnl_deactivation');
+- Создаем настройки, это будет масив, ключ и значение. Туда поместим цвет(фона и текста), текст вывода и местоположение самого вывода.
+- Пишем функцию активации, в ней обьявляем масив настроек, и проходимся по нему через цикл, в цикле мы сохраняем в бд эти настройки.
+- В функции деактивации мы делаем тоже самое что в функции активации, но мы в цикле удоляем по ключу эти настройки из бд
+- Дальше можем проверить через хук wp_footer сработали это все. Вывод этих настроек на фронтент.
+- Теперь выводим это все в админке, создаем свою страницу в админке. Вешаем хук для вывод в меню (боковой панели)
+add_action('admin_menu', 'cnl_register_menu');
+Он срабатывает до загрузки всего меню в админке. И цепляет функцию
+- В этой функции мы будем добовлять в боковой панели еше один блок меню.
+function cnl_register_menu()
+- В это функции будет масив в котором есть правела добовление этого меню. Так же там будет название функции вывода
+фронтенда страници в админке нашего плагина.
+- Там мы добовляем для проверки просто надпись для вывода
+
+-----------------------------------------
+3.9) Создание темы: "404"
+-----------------------------------------
+Тут все просто, так как мы создали фаил 404.php все ошибки которые будут. Будут на него перекидыватся
+и добовляем туда функции хедор и футор WP
+И делаем из будстрап такую красивую форму, и кнопку вернутся на главную страницу с помошью функции wp  <?php echo home_url(); ?>
+
+------------ Содержимое файла -----------------------
+<!-- подключаем хедер  -->
+<?php
+get_header();
+?>
+
+<div class="container">
+    <div class="form-container">
+        <h1 class="text-center mb-5">404 - Page Not Found</h1>
+        <pre class="text-center mb-5">
+██████╗░░█████╗░░██████╗░███████╗  ███╗░░██╗░█████╗░████████╗  ███████╗░█████╗░██╗░░░██╗███╗░░██╗██████╗░
+██╔══██╗██╔══██╗██╔════╝░██╔════╝  ████╗░██║██╔══██╗╚══██╔══╝  ██╔════╝██╔══██╗██║░░░██║████╗░██║██╔══██╗
+██████╔╝███████║██║░░██╗░█████╗░░  ██╔██╗██║██║░░██║░░░██║░░░  █████╗░░██║░░██║██║░░░██║██╔██╗██║██║░░██║
+██╔═══╝░██╔══██║██║░░╚██╗██╔══╝░░  ██║╚████║██║░░██║░░░██║░░░  ██╔══╝░░██║░░██║██║░░░██║██║╚████║██║░░██║
+██║░░░░░██║░░██║╚██████╔╝███████╗  ██║░╚███║╚█████╔╝░░░██║░░░  ██║░░░░░╚█████╔╝╚██████╔╝██║░╚███║██████╔╝
+╚═╝░░░░░╚═╝░░╚═╝░╚═════╝░╚══════╝  ╚═╝░░╚══╝░╚════╝░░░░╚═╝░░░  ╚═╝░░░░░░╚════╝░░╚═════╝░╚═╝░░╚══╝╚═════╝░
+        </pre>
+        <p class="text-center">Oops! The page you are looking for cannot be found.</p>
+        <div class="text-center mb-5">
+            <a href="<?php echo home_url(); ?>" class="btn btn-dark">Return to Homepage</a>
+    </div>
+</div>
+
+
+
+<!-- подключаем футер  -->
+<?php
+
+get_footer();
+?>
+-------------------------------------------------------------------------------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+4.2) Разработка собственого плагина 'Создание фронтенда в админке/получение данных формы в админку/ сохранение в бд опций'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-# Мы уже создали наш плагин в файл wp-content->plugins/ph-cookie-notify/index.php
+-# Указали что будит происходить при активации (закидывает параметры по умолчанию в бд(опцию) и при деактивации (адаляет из бд(опции) наши параметры)
+-# добавели иконку и пунк меню в админ панели
+-# и проработали над фронтент части нашего плагина добавели форму и вывод формы в функции function cnl_admin_page_view()
+-Сначало проверили отображается ли фронтент с помошью echo
+-Затем получили наши параметры по умолчанию через функцию WP get_option и засунунли их в переменную
+-Потом сделали форму отправки через method="POST", action="" мы не добовляли так как эта функция будет колбек, она отправляет и получает данные через пост запрос
+-В форме мы прописали вывод значение value="<?= $color; ?> нашей переменных которые отображают настройки
+-с помошью функции WP checked мы поставели выборку какой из них(пунктов) будет выбран (он просто сравнивает 2 значение и где совпадет там пишет checked
+- После отправки постом, значение приходит в эту же функцию и с помошю условия мы проверяем что там что то есть и просто обновляем
+параметры этих данных с помошью функции update_option
+
+------------ Содержимое плагина функции function cnl_admin_page_view() -----------------------
+// Вывод фронтента в админке (верска)
+function cnl_admin_page_view() {
+    // Для проверки выводим надпись в админке, плагина
+   // echo '<h1>Hello, world</h1>';
+// После того как мы отправели данные которые внизу описаны, мы получим эти данные постом, сюда обратно. так как мы неуказывали action=""
+// и эта функция будет работать колбек, сюда же прийдут эти данные для обработки. Что бы их обработать надо в начале написать условия для запуска
+// Если у нас что то в посте есть (он не пустой) значит мы обновляем значение нашей настройки, а затем берем эти значение из настройки и подставляем их в поля.
+	if(!empty($_POST)) {
+		update_option('cnl_bg', $_POST['cnl_bg']);
+		update_option('cnl_color', $_POST['cnl_color']);
+		update_option('cnl_text', $_POST['cnl_text']);
+		update_option('cnl_position', $_POST['cnl_position']);
+	}
+	// получаем опции
+	//фон
+	$bg = get_option('cnl_bg');
+	//цвет
+	$color = get_option('cnl_color');
+	// текст
+	$text = get_option('cnl_text');
+	// позиция
+	$position = get_option('cnl_position');
+
+	// Делаем форму для админки
+?>
+	<h2>Настройки уведомления:</h2>
+	<!--Мы можем неуказывать action="", так как по умолчанию он перекидывает на эту же страницу -->
+	<form method="POST">
+		<p>
+			<label>
+				Введите значение для цвета фона:
+				<input type="text" name="cnl_bg" value="<?= $bg; ?>">
+			</label>
+		</p>
+		<p>
+			<label>
+				Введите значение для цвета текста:
+				<input type="text" name="cnl_color" value="<?= $color; ?>">
+			</label>
+		</p>
+		<p>
+			<label>
+				Введите текст уведомление:
+				<input type="text" name="cnl_text" value="<?= $text; ?>">
+			</label>
+		</p>
+		<!--<fieldset> используется для группировки нескольки лементов управления  https://developer.mozilla.org/ru/docs/Web/HTML/Element/fieldset -->
+		<fieldset>
+			<!-- <legend> представляет собой заголовок содержания родительского элемента  https://developer.mozilla.org/ru/docs/Web/HTML/Element/legend-->
+			<legend>
+				Выберите положение для уведомление:
+			</legend>
+			<label>
+				Сверху
+				<input
+					type="radio"
+					name="cnl_position"
+					value="top"
+				<?php
+				// Если 2 значение совпадают, то атрибут будет checked   https://wp-kama.ru/function/checked
+				checked('top', $position, true);
+				?>>
+			</label>
+			<label>
+				Снизу
+				<input
+					type="radio"
+					name="cnl_position"
+					value="bottom"
+				<?php
+				// Если 2 значение совпадают, то атрибут будет checked   https://wp-kama.ru/function/checked
+				checked('bottom', $position, true);
+				?>>
+			</label>
+		</fieldset>
+		<br>
+		<button type="submit">Сохранить настройки</button>
+	</form>
+<?php
+
+}
+------------------------------------------------------------------------------------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+4.3) Разработка собственого плагина 'Вывод на фронтент'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Для того что бы нам вывести на фронтент, надо сначало запустить хук
+add_action('wp_footer', 'cnl_front_page_view');
+-После этого мы получаем все наши настройки для плагина и засовываем в переменную.
+- Далее мы доделаваем логику посиции и дописываем туда : 0; , что бы получилось bottom: 0
+- Теперь делаем нашу форму( табличку) для вывода, а с помошью css добовляем это все в стилях
+
+------------ Содержимое плагина функции function cnl_front_page_view() -----------------------
+// Хук для вывода на фронтенд
+add_action('wp_footer', 'cnl_front_page_view');
+
+// Сама функция для вывода на фронтент
+function cnl_front_page_view() {
+	// получаем опции
+	//фон
+	$bg = get_option('cnl_bg');
+	//цвет
+	$color = get_option('cnl_color');
+	// текст
+	$text = get_option('cnl_text');
+	// позиция
+	$position = get_option('cnl_position');
+	// вывод сверху или снизу
+	$css = $position . ': 0;';  // получится либо top: 0; либо bottom: 0
+// Теперь сделаем форму для вывода. Так как маленький код напишем html и css тут, что бы не создовать новый файл.
+	?>
+		<div class="alert">
+			<div class="wrapper">
+				<?= $text; ?>
+				<br>
+				<button class="alert_btn">Я согласен</button>
+			</div>
+			<style>
+				.alert{
+					color: <?= $color;?>;
+					background-color:  <?= $bg;?>;
+					position: fixed;
+					<?= $css;?>
+					left: 0;
+					z-index: 99999999;
+					text-align: center;
+					font-size: 30px;
+					pading: 20px 10px;
+					width: 100%;
+				}
+				.alert button{
+                    border: 1px solid  <?= $color;?>;
+                    background-color: transparent;
+                    font: inherit;
+                    font-size: 14px;
+                    color:  <?= $color;?>;
+                    padding: 10px 20px;
+                    cursor: pointer;
+				}
+                .alert button:hover,
+                .alert button:active,
+                .alert button:focus {
+                    background-color:  <?= $color;?>;
+                    color:  <?= $bg;?>;
+                    transition: 0.3s;
+                }
+
+			</style>
+		</div>
+	<?php
+
+};
+------------------------------------------------------------------------------------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+4.4) Разработка собственого плагина 'Доработка верстки: отправка ajax запроса и добовление куки'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Теперь у нас есть кнопка, осталось что бы она заработала, а при нажатие на нее исчезло. Для этого мы подготовим ajax запрос
+при нажимание на кнопку, далее созаются куки, если они есть, значит можно не выводить кнопку.
+Пишем джава скрипт для отправки на сервер ajax запроса отправляем на admin-ajax.php файл. Сначало находим его сылку
+Дальше определяем какой кнопкой мы нажимаем на кнопку (его класс). Запускаем событие при нажатие и прикрепляем хук
+cnl_cookie_ajax' что бы при нажатии его цеплял. Отправляем данные через пост. Проверяем на ошибку, если все прошло успешно
+то удалим этот скрипт на вывод кнопки
+
+Что бы получить нам данные они должны быть нажатими обычными и зарегестрироваными пользователями. Поэтому подписываемся
+на 2 хука
+add_action('wp_ajax_nopriv_cnl_cookie_ajax' , 'cnl_ajax_handler');
+add_action('wp_ajax_cnl_cookie_ajax' , 'cnl_ajax_handler')
+Далее когда их цепляет ajax то мы запускаем функцию cnl_ajax_handler', которая устанавливает куки на месяц и завершаем работу WP
+
+Что бы проверить куки переходим в хром доп инструменты - инструменты разрабочика - вкладка application - cookies
+
+------------ Содержимое плагина функции function cnl_front_page_view() -----------------------
+
+// Сама функция для вывода на фронтент
+function cnl_front_page_view() {
+	// Проверка есть ли куки вывода плагина, если есть, то невыводим верстку
+	if ($_COOKIE['cnl_cookie_argeement'] !== 'agreed'):
+		...
+		?>
+			<div class="alert">
+				<div class="wrapper">
+				...
+				<style>
+				...
+				</style>
+
+	            <script>
+	               // Получим нашу сылку на ajax смотреть уроки с аяксом. Мы подключаме этот файл для обработки
+	               const url = "<?= esc_url(admin_url('admin-ajax.php'));?>"
+	               // получим нашу кнопку (клас нашей кнопки)
+	               const btn = document.querySelector('.alert_btn');
+	               // оброботчик событий при нажатие и повесим на него функцию
+	               btn.addEventListener('click', function(e){
+	                   // создаем новую дату
+	                   const data = new FormData();
+	                   // к этой дате повесим хук
+	                   data.append('action', 'cnl_cookie_ajax');
+	                   // переходим к реквесту  XMLHttp
+	                   const xhr = new XMLHttpRequest();
+	                   // передаем данные через пост
+	                   xhr.open('POST', url);
+	                   // отправляем их на сервер
+	                   xhr.send(data);
+	                   // подписываемся на событие, который вуступает на изменение и запускается функция
+	                   xhr.addEventListener('readystatechange', function (){
+	                       // мы делаем проверку что аякс запрос не дошол до конца и мы выходим с этой функций
+	                       if(xhr.readyState !== 4) return;
+	                       // а если мы получили статус 200 значит запрос прошол и мы делаем
+	                       if(xhr.status === 200){
+	                           // Мы возмем нашу кнопку обратимся к классу wrapper затем к классу alert (вернемся на 2 класса на верх) и вызовим метот remove (удалим этот скрипт)
+	                           btn.parentElement.parentElement.remove();
+	                       }
+	                   })
+	               })
+	            </script>
+			</div>
+		<?php
+	endif;
+};
+// подписываемся на 2 хука которые даст контроль то что мы получили от запроса аякс
+add_action('wp_ajax_nopriv_cnl_cookie_ajax' , 'cnl_ajax_handler');
+add_action('wp_ajax_cnl_cookie_ajax' , 'cnl_ajax_handler');
+// реализуем эту функцию
+function cnl_ajax_handler() {
+	// установка куки
+	// название куки, значение, время для жизни этой куки (месяц)текушая время+месяц, путь к дериктории которая доступна
+	setcookie('cnl_cookie_argeement', 'agreed', time()+60*60*24*30, '/');
+	// Вывод ответ (негде не выыводит
+	echo 'OK';
+	// для завершение скрипта
+	wp_die();
+}
+
+------------------------------------------------------------------------------------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5) Завершение проэкта, подготовка к переносу в гит
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Для начало сохраняем бд. Для этого заходим в phpMyAdmin. Водим логин и пароль где указали в докере
+Заходим в экспорт, выбераем sql и сохраняем на компе.
+- можно все перекопировать в init фаил для автоматического загрузки бд.
+- теперь помешаем это все в гит
+
+
+
+
+
+
+
+
+
