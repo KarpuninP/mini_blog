@@ -1,0 +1,242 @@
+/* rest css */
+img{border:none;}
+textarea,input,button{outline:none;}
+textarea:focus, input:focus, button:focus{outline:none; border:none;}
+textarea:active, input:active, button:active{outline:none;border:none;}
+a:hover {outline: none;}
+.btn.submit:focus {
+    outline-style: none;
+}
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section, main {
+    display: block;
+}
+label{margin:0;}
+ol, ul {
+    list-style: none;
+}
+blockquote, q {
+    quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+    content: '';
+    content: none;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+*{
+    box-sizing: border-box;
+    margin:0;
+    padding:0;
+}
+/* Website styles start here */
+
+body {
+    background-color: #F8F8FF;
+    font-family: 'Inter', sans-serif;
+}
+
+header .right-login {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+    margin-bottom: 40px;
+}
+
+header .right-login a {
+    color: black;
+    text-decoration: none;
+    margin: 5px;
+}
+
+header .right-login a:hover {
+    color: #808080;
+}
+
+header h1 {
+    display: block;
+    font-size: 30px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+header .nav-user {
+    margin-bottom: 45px;
+    background-color: #141310; /
+    border-radius: 50px;
+}
+
+header .img-user {
+    padding-left: 10px;
+    width: 140px;
+    height: 100px;
+    filter: invert(1);
+}
+
+header .nav-link {
+    color: #D3D3D3 !important;
+}
+
+header .nav-link:hover {
+    color: #FFF8DC;
+}
+
+header .nav-link:focus {
+    color: #F0FFF0;
+}
+/* Invert color for the menu toggle button when screen size is smaller */
+header .navbar-toggler {
+    filter: invert(1);
+}
+
+/* Body */
+/* Remove top padding for the main section */
+main .py-5 {
+    padding-top: 0 !important;
+}
+
+main .edit {
+    text-decoration: none;
+    font-size: 10px;
+    color: #1E90FF;
+}
+
+main .text-user a {
+    text-decoration: none;
+    border: 3px solid #ffffff;
+    border-radius: 20px;
+    color: #fff;
+    padding: 10px 20px;
+    transition: .3s;
+    background-color: #252525;
+}
+
+main .text-user a:hover {
+    background: #E1E1E1;
+    box-shadow: 0 0 6px 1px #cccc;
+    color: #2A2A2A;
+}
+
+/* Footer */
+/* Padding for the entire footer section (black line) */
+footer .p {
+    padding: 50px;
+}
+
+footer .container-fluid a {
+    opacity: 0.4;
+    font-size: 15px;
+    line-height: 16px;
+    font-weight: 400;
+    color: #ffffff;
+}
+
+/* Interactivity for the links in the footer */
+footer .container-fluid a:hover {
+    opacity: 0.7;
+}
+
+/* Additional */
+/* Add margin-bottom for form select and datalist elements */
+main form select,
+datalist {
+    margin-bottom: 10px;
+}
+
+/* Modal */
+/* Add margin to buttons */
+.btn {
+    margin-left: 5px;
+}
+/* disable field */
+.disabled {
+    background-color: #DCDCDC;
+    color: #000000;
+    opacity: 1;
+    pointer-events: none;
+}
+
+.mtb-10 {
+    margin-top: 10rem ;
+    margin-bottom: 10rem ;
+}
+
+/* Pagination */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    margin: 0 0 50px;
+}
+
+.pagination li {
+    display: inline-block;
+    margin-right: 0.25rem;
+    border-radius: 0.25rem;
+}
+
+.pagination li .page-link[aria-current="page"] {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.pagination li:first-child a,
+.pagination li:first-child span {
+    margin-right: 0;
+    border-top-left-radius: 0.25rem;
+    border-bottom-left-radius: 0.25rem;
+}
+
+.pagination li:last-child a,
+.pagination li:last-child span {
+    margin-right: 0;
+    border-top-right-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+}
+
+/* Carousel Styles */
+
+.center {
+    display: flex;
+    justify-content: center;
+}
+
+.carousel-container {
+    position: relative;
+    overflow: hidden;
+    width: 50%;
+    height: 100px;
+}
+
+.carousel-track {
+    display: flex;
+    white-space: nowrap;
+    animation: marquee 10s linear infinite;
+}
+
+.carousel-block {
+    padding: 20px;
+    text-decoration: none;
+    color: #1e1f26;
+}
+
+@keyframes marquee {
+    from {
+        transform: translateX(0%);
+    }
+    to {
+        transform: translateX(-100%);
+    }
+}
+
+/* Remove Bootstrap styles for login */
+
+.login-style {
+    max-width: 200px !important;
+    background-color: rgba(0, 0, 0, 0) !important;
+}
