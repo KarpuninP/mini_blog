@@ -29,6 +29,7 @@ if ( is_home() ):
 
     // Execute the query
 	$theoryQuery = new WP_Query( $args );
+
 	?>
 
     <main>
@@ -50,6 +51,7 @@ if ( is_home() ):
             <div class="carousel-container ">
                 <div class="carousel-track">
 					<?php
+
                         $arr = [];
                         foreach ( $theoryCategory as $cat ):
 	                        // Store the category slug and name in the $arr array
@@ -87,7 +89,7 @@ if ( is_home() ):
                                         <li>
                                             <hr class="dropdown-divider">
                                         </li>
-                                        <li><a class="dropdown-item" href="#scrollspyHeadingDown">Перейти в низ</a></li>
+                                        <li><a class="dropdown-item" href="#scrollspyHeadingDown">Drop to down</a></li>
                                     </ul>
                                 </li>
                             </ul>
@@ -225,7 +227,7 @@ else:
                                         <li>
                                             <hr class="dropdown-divider">
                                         </li>
-                                        <li><a class="dropdown-item" href="#scrollspyHeadingDown">Перейти в низ</a></li>
+                                        <li><a class="dropdown-item" href="#scrollspyHeadingDown">Drop to down</a></li>
                                     </ul>
                                 </li>
                             </ul>
